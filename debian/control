@@ -1,0 +1,20 @@
+Source: libhsmp
+Maintainer: Nathan Fontenot <nathan.fontenot@amd.com>
+Section: libs
+Priority: optional
+Standards-Version: 4.1.2
+Build-Depends: debhelper (>= 10), autotools-dev
+
+Package: libhsmp
+Architecture: any
+Description: Host System Management Port library
+ The Host System Management Port library provices user level access
+ to the HSMP mailboxes implemented by the firmware in the System
+ Management Unit (SMU).
+
+Package: libhsmp-dev
+Section: libdevel
+Architecture: any
+Multi-Arch: same
+Depends: libhsmp (= ${binary:Version}), ${misc:Depends}
+Description: Host System Management Port library headers

@@ -1,0 +1,5 @@
+libhsmp (1.0-1) UNRELEASED; urgency=medium
+
+  * Initial release, first debian package
+
+ -- Nathan Fontenot <nathan.fontenot@amd.com>  Fri, 05 Feb 2021 12:50:53 -0600

@@ -1,0 +1,56 @@
+%define name libhsmp
+%define version @PACKAGE_VERSION@
+%define so_version 1
+%define release 1
+
+Name: %{name}
+Summary: Library to provide access to AMD HSMP functions.
+Version: %{version}
+Release: %{release}
+License: MIT
+
+Source: %{name}-%{version}.tar.gz
+BuildRoot: %{buildroot}
+
+%description
+The Host System Management Port library provices user level access
+to the HSMP mailboxes implemented by the firmware in the System
+Management Unit (SMU).
+
+%package devel
+Summary: libhsmp header files
+Group: Development/Libraries
+
+%description devel
+Header files required for development and testing libhsmp.
+
+%prep
+%setup -q
+
+%build
+%configure
+%{__make} %{?_smp_flags}
+
+%install
+rm -rf $RPM_BUILD_ROOT
+%make_install
+
+%post
+ldconfig
+
+%postun
+ldconfig
+
+%files
+%defattr(-, root, root)
+%{_docdir}/%{name}/COPYING
+%{_docdir}/%{name}/README
+%{_libdir}/%{name}.so.%{so_version}
+%{_libdir}/%{name}.so.%{version}
+%{_libdir}/%{name}.la
+%{_libdir}/%{name}.a
+
+%files devel
+%{_libdir}/%{name}.so
+%{_includedir}/%{name}.h
+

@@ -1,0 +1,61 @@
+
+=============================================
+Host System Management Port library (libhsmp)
+=============================================
+
+The Host System Management Port (HSMP) library provides user level
+access to the HSMP mailboxes implemented by the firmware in the
+System Management Unit (SMU). Full documentation of the HSMP can
+be found in the Processor Programming Reference (PPR) for Family
+19h on AMD's Developer Central;
+
+https://developer.amd.com/resources/epyc-resources/epyc-specifications
+
+1. Disclaimer
+=============
+
+The libhsmp library is supported only on AMD Family 19h (including
+third-generation AMD EPYC processors (codenamed "Milan")) or later
+CPUs. Using the libhsmp library on earlier CPUs could produce
+unexpected results, and may cause the processor to operate outside
+of your motherboard or system specifications. Correspondingly, libhsmp
+defaults to only executing on AMD Family 19h and later CPUs.
+
+2. Interfaces
+=============
+
+A full listing of the interfaces to libhsmp with explanations is
+available in libhsmp.h.
+
+3. Errors
+=========
+
+The interfaces exported by libhsmp can return two types of errors,
+a standard Linux errno error or a HSMP defined error. To support
+this the library interfaces are designed to return 0 on success
+and a non-zero value on failure. A return value >0 indicates a
+HSMP defined error and a return value of -1 indicates a Linux error
+where errno will be set.
+
+To ease the determination of errors, a hsmp_strerror() interface is
+provided that will return a proper error string for all return values
+from libhsmp.
+
+4. Build
+========
+
+To build and install the libhsmp library use the following commands.
+
+#> ./autogen.sh
+#> ./configure
+#> make
+#> make install
+
+5. Testing
+==========
+
+The libhsmp source contains a test module that attempts to invoke
+each API exported by libhsmp with both valid and invalid parameters.
+The commands needed to drive the test suite are built by default when
+building the libhsmp library. The run_tests.sh script can be used
+to run the test suite and validate libhsmp.
