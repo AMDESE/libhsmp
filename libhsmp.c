@@ -1233,7 +1233,7 @@ int hsmp_set_data_fabric_pstate(enum hsmp_df_pstate pstate)
 	} else {
 		msg.msg_num = HSMP_SET_DF_PSTATE;
 		msg.num_args = 1;
-		msg.args[0] = pstate;
+		msg.args[0] = pstate - 1; /* HW P-states numbered 0 - 3 */
 	}
 
 	return hsmp_send_message(hsmp_data.default_socket_id, &msg);
