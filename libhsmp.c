@@ -118,6 +118,7 @@ static struct {
 	int			initialized;
 	int			lock_fd;
 	int			default_socket_id;
+	int			hsmp_disabled;
 } hsmp_data;
 
 /* HSMP Status codes used internally */
@@ -333,15 +334,19 @@ retry:
 	/*
 	 * SMU has not responded to the message yet.
 	 *
-	 * Ideally we would like to return HSMP_STATUS_NOT_READY here
-	 * but unfortunately this is defined as 0, which is the same as
-	 * returning success. For this one instance we map this HSMP
-	 * status to ETIMEDOUT errno value.
+	 * If we time out waiting for SMU to respond indicates HSMP is not
+	 * enabled in BIOS. Unfortunately there is no error return if HSMP
+	 * is disabled, SMU simply does not respond.
+	 *
+	 * Mark HSMP as disabled, this results in any future calls returning
+	 * ENOTSUP. There is no way to enable HSMP without rebooting.
 	 */
 	if (mbox_status == HSMP_STATUS_NOT_READY) {
 		if (--timeout == 0) {
-			pr_debug("SMU timeout for message ID %u\n", msg->msg_num);
-			errno = ETIMEDOUT;
+			pr_debug("SMU timeout for message ID %u, HSMP is not enabled\n",
+				 msg->msg_num);
+			hsmp_data.hsmp_disabled = 1;
+			errno = ENOTSUP;
 			return -1;
 		}
 
@@ -859,6 +864,11 @@ static int hsmp_enter(enum hsmp_msg_t msg_id)
 	if (geteuid() != 0) {
 		pr_debug("libhsmp requires root access!\n");
 		errno = EPERM;
+		return -1;
+	}
+
+	if (hsmp_data.hsmp_disabled) {
+		errno = ENOTSUP;
 		return -1;
 	}
 
