@@ -580,7 +580,7 @@ static int get_system_info(void)
 	 */
 	if (id == 2 && (
 #ifdef HSMP_FAMILY_0x17
-		(family == 0x17) ||
+		(family == 0x17 && model >= 0x30 && model <= 0x3F) ||
 #endif
 		(family >= 0x19))) {
 		pr_debug("Detected %s CPU family %xh model %xh\n",
