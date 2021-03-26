@@ -5,13 +5,16 @@ LOG_FILE=./run_tests.log
 
 function log()
 {
-	echo "$@" >>$LOG_FILE
+	if [ $verbose -ne 0 ]; then
+		echo "$@" | tee -a $LOG_FILE
+	else
+		echo "$@" >>$LOG_FILE
+	fi
 }
 
 function say()
 {
-	log "$@"
-	echo "$@"
+	echo "$@" | tee -a $LOG_FILE
 }
 
 function run_cmd()
