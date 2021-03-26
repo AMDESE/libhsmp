@@ -91,8 +91,11 @@ function run_all_tests()
 	run_cmd ./configure $settings
 
 	say "## Building libhsmp"
+	log ""
 	run_cmd make clean
+	log ""
 	run_cmd make
+	log ""
 
 	# Run test as normal user
 	say "## Testing libhsmp as a regular user ("$settings")"
@@ -120,6 +123,9 @@ function run_all_tests()
 		run_cmd sudo ./hsmp_test_static -e $VERBOSE
 		chmod u-s ./hsmp_test_static
 		print_results
+
+		log ""
+		log ""
 	fi
 }
 
