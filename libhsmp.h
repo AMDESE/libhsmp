@@ -189,6 +189,17 @@ enum hsmp_nbio_pstate {
 int hsmp_set_nbio_pstate(u8 bus_num, enum hsmp_nbio_pstate pstate);
 
 /*
+ * Helper function to iterate over enumerated PCIe controller complexes in
+ * the system. Begin a new search by setting idx = 0. The return value from
+ * the function will be greater than zero and bus_num will be set if the
+ * first/next bus is located. The return value should be assigned to idx for
+ * the next iteration. Note this enumeration may not include every possible
+ * bus in the system. It will only include the busses corresponding to the
+ * base bus for a PCIe controller complex.
+ */
+int hsmp_next_bus(int idx, u8 *bus_num);
+
+/*
  * Get the theoretical maximum DDR bandwidth in GB/s.
  *
  * Only available on systems with hsmp interface version >= 3.

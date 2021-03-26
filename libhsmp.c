@@ -1371,6 +1371,27 @@ int hsmp_set_nbio_pstate(u8 bus_num, enum hsmp_nbio_pstate pstate)
 	return hsmp_send_message(socket_id, &msg);
 }
 
+int hsmp_next_bus(int idx, u8 *bus_num)
+{
+	int err;
+
+	err = hsmp_enter(0);
+	if (err)
+		return -1;
+
+	if (!bus_num)
+		return -1;
+
+	if (idx < 0 || idx >= MAX_NBIOS)
+		return -1;
+
+	if (!hsmp_data.nbios[idx].dev)
+		return -1;
+
+	*bus_num = hsmp_data.nbios[idx].bus_base;
+	return idx + 1;
+}
+
 static int get_ddr_bandwidth_data(u32 *max_bw, u32 *utilized_bw, u32 *bw_pct)
 {
 	struct hsmp_message msg = { 0 };
