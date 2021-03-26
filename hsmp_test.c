@@ -806,12 +806,6 @@ void test_nbio_pstate_supported(void)
 		pr_pass("Testing with invalid pstate (%d) passed\n");
 
 	pstate = HSMP_NBIO_PSTATE_AUTO;
-	rc = hsmp_set_nbio_pstate(-1, pstate);
-	if (test_expected_failure(rc))
-		pr_fail("Testing with invalid socket id failed\n");
-	else
-		pr_pass("Testing with invalid socket id passed\n");
-
 	rc = hsmp_set_nbio_pstate(0, pstate);
 	if (test_failed(rc)) {
 		pr_fail("Setting HSMP_NBIO_PSTATE_AUTO pstate (%d) failed, %s\n",
@@ -855,12 +849,6 @@ void test_nbio_pstate_unsupported(void)
 		pr_fail("Testing with invalid pstate (%d) failed\n");
 
 	pstate = HSMP_NBIO_PSTATE_AUTO;
-	rc = hsmp_set_nbio_pstate(-1, pstate);
-	if (!test_failed(rc) || errno == EOPNOTSUPP)
-		pr_pass("Testing with invalid socket id passed\n");
-	else
-		pr_fail("Testing with invalid socket id failed\n");
-
 	rc = hsmp_set_nbio_pstate(0, pstate);
 	if (!test_failed(rc) || errno == EOPNOTSUPP)
 		pr_pass("Testing HSMP_NBIO_PSTATE_AUTO pstate (%d) passed\n",

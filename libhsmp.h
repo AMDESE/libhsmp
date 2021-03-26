@@ -3,6 +3,7 @@
  * Copyright (C) 2020 Advanced Micro Devices, Inc. - All Rights Reserved
  *
  * Author: Nathan Fontenot <nathan.fontenot@amd.com>
+ * Author: Lewis Carroll <lewis.carroll@amd.com>
  *
  * AMD Host System Management Port library
  */
@@ -180,11 +181,12 @@ enum hsmp_nbio_pstate {
 };
 
 /*
- * Set the NBIO (PCI-e interface) P-state for the specified socket.
+ * Set the NBIO (PCI-e interface) P-state for the root complex hosting the
+ * specified PCI bus number (0x00 - 0xFF).
  *
  * Only available on systems with hsmp interface version >= 2.
  */
-int hsmp_set_nbio_pstate(int socket_id, enum hsmp_nbio_pstate pstate);
+int hsmp_set_nbio_pstate(u8 bus_num, enum hsmp_nbio_pstate pstate);
 
 /*
  * Get the theoretical maximum DDR bandwidth in GB/s.

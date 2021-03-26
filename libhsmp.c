@@ -1329,16 +1329,23 @@ int hsmp_c0_residency(int socket_id, u32 *residency)
 	return 0;
 }
 
-int hsmp_set_nbio_pstate(int socket_id, enum hsmp_nbio_pstate pstate)
+int hsmp_set_nbio_pstate(u8 bus_num, enum hsmp_nbio_pstate pstate)
 {
 	struct hsmp_message msg = { 0 };
 	struct nbio_dev *nbio;
 	u8 dpm_min, dpm_max;
+	int idx, socket_id;
 	int err;
 
 	err = hsmp_enter(HSMP_SET_NBIO_DPM_LEVEL);
 	if (err)
 		return -1;
+
+	idx = bus_to_nbio(bus_num);
+	if (idx == -1) {
+		errno = EINVAL;
+		return -1;
+	}
 
 	switch (pstate) {
 	case HSMP_NBIO_PSTATE_AUTO:
@@ -1354,7 +1361,8 @@ int hsmp_set_nbio_pstate(int socket_id, enum hsmp_nbio_pstate pstate)
 		return -1;
 	}
 
-	nbio = &hsmp_data.nbios[socket_id];
+	nbio = &hsmp_data.nbios[idx];
+	socket_id = (idx >= (MAX_NBIOS / 2)) ? 1 : 0;
 
 	msg.msg_num = HSMP_SET_NBIO_DPM_LEVEL;
 	msg.num_args = 1;
