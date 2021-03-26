@@ -288,14 +288,6 @@ static int _hsmp_send_message(struct pci_dev *root_dev, struct hsmp_message *msg
 	int err, timeout;
 	u32 mbox_status;
 
-#ifdef DEBUG_HSMP
-	pr_debug("Sending message ID %d\n", msg->msg_num);
-	while (msg->num_args && arg_num < msg->num_args) {
-		pr_debug("    arg[%d] 0x%08X\n", arg_num, msg->args[arg_num]);
-			 arg_num++;
-	}
-#endif
-
 	/* Zero the status register */
 	mbox_status = HSMP_STATUS_NOT_READY;
 	err = smu_pci_write(root_dev, hsmp_access.mbox_status, mbox_status, &hsmp);
@@ -389,6 +381,7 @@ retry:
 static int hsmp_send_message(int socket_id, struct hsmp_message *msg)
 {
 	struct pci_dev *root_dev;
+	unsigned int arg_num = 0;
 	int err;
 
 	root_dev = socket_id_to_dev(socket_id);
@@ -400,6 +393,14 @@ static int hsmp_send_message(int socket_id, struct hsmp_message *msg)
 	err = hsmp_lock();
 	if (err)
 		return -1;
+
+#ifdef DEBUG_HSMP
+	pr_debug("Sending message ID %d to socket %d\n", msg->msg_num, socket_id);
+	while (msg->num_args && arg_num < msg->num_args) {
+		pr_debug("    arg[%d] 0x%08X\n", arg_num, msg->args[arg_num]);
+			 arg_num++;
+	}
+#endif
 
 	err = _hsmp_send_message(root_dev, msg);
 	hsmp_unlock();
