@@ -33,6 +33,15 @@ AS_IF([test "x$enable-debug" = "xyes"],
 
 AM_CONDITIONAL([WITH_LIBHSMP_DEBUG], [test "x$enable_debug" = "xyes"])
 
+# Option to build libhsmp with debug-pci enabled
+AC_ARG_ENABLE([debug-pci],
+	      AS_HELP_STRING([--enable-debug-pci], [enable libhsmp PCI debug output]))
+
+AS_IF([test "x$enable-debug-pci" = "xyes"],
+      [AC_DEFINE([WITH_LIBHSMP_DEBUG_PCI], [1], [enable libhsmp PCI debug output])])
+
+AM_CONDITIONAL([WITH_LIBHSMP_DEBUG_PCI], [test "x$enable_debug_pci" = "xyes"])
+
 # Option for Family 0x17
 AC_ARG_ENABLE([fam17],
 	      AS_HELP_STRING([--enable-fam17], [UNSUPPORTED: enable libhsmp Family 0x17 CPUs]))

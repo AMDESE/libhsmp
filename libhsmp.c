@@ -32,6 +32,12 @@
 #define pr_debug(...)   ((void)0)
 #endif
 
+#ifdef DEBUG_HSMP_PCI
+#define pr_debug_pci(...)	printf("[libhsmp] " __VA_ARGS__)
+#else
+#define pr_debug_pci(...)	((void)0)
+#endif
+
 static struct smu_port {
 	u32 index_reg;  /* PCI-e index register for SMU access */
 	u32 data_reg;   /* PCI-e data register for SMU access */
@@ -201,12 +207,12 @@ static bool msg_id_supported(enum hsmp_msg_t msg_id)
 static int smu_pci_write(struct pci_dev *root, u32 reg_addr,
 			 u32 reg_data, struct smu_port *port)
 {
-	pr_debug("pci_write_long dev 0x%p, addr 0x%08X, data 0x%08X\n",
-		 root, port->index_reg, reg_addr);
+	pr_debug_pci("pci_write_long dev 0x%p, addr 0x%08X, data 0x%08X\n",
+		     root, port->index_reg, reg_addr);
 	pci_write_long(root, port->index_reg, reg_addr);
 
-	pr_debug("pci_write_long dev 0x%p, addr 0x%08X, data 0x%08X\n",
-		 root, port->index_reg, reg_addr);
+	pr_debug_pci("pci_write_long dev 0x%p, addr 0x%08X, data 0x%08X\n",
+		     root, port->index_reg, reg_addr);
 	pci_write_long(root, port->data_reg, reg_data);
 
 	return 0;
@@ -215,13 +221,13 @@ static int smu_pci_write(struct pci_dev *root, u32 reg_addr,
 static int smu_pci_read(struct pci_dev *root, u32 reg_addr,
 			u32 *reg_data, struct smu_port *port)
 {
-	pr_debug("pci_write_long dev 0x%p, addr 0x%08X, data 0x%08X\n",
-		 root, port->index_reg, reg_addr);
+	pr_debug_pci("pci_write_long dev 0x%p, addr 0x%08X, data 0x%08X\n",
+		     root, port->index_reg, reg_addr);
 	pci_write_long(root, port->index_reg, reg_addr);
 
 	*reg_data = pci_read_long(root, port->data_reg);
-	pr_debug("pci_read_long  dev 0x%p, addr 0x%08X, data 0x%08X\n",
-		 root, port->data_reg, *reg_data);
+	pr_debug_pci("pci_read_long  dev 0x%p, addr 0x%08X, data 0x%08X\n",
+		     root, port->data_reg, *reg_data);
 
 	return 0;
 }
