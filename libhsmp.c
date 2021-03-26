@@ -232,12 +232,20 @@ static int smu_pci_read(struct pci_dev *root, u32 reg_addr,
 	return 0;
 }
 
+/*
+ * Return the PCI device pointer for the IOHC dev hosting the lowest numbered
+ * PCI bus in the specified socket (0 or 1). If socket_id 1 is passed on a 1P
+ * system, NULL will be returned.
+ */
 static struct pci_dev *socket_id_to_dev(int socket_id)
 {
-	if (socket_id < 0 || socket_id > MAX_NBIOS)
+	int idx;
+
+	if (socket_id < 0 || socket_id >= MAX_SOCKETS)
 		return NULL;
 
-	return hsmp_data.nbios[socket_id].dev;
+	idx = socket_id * 4;
+	return hsmp_data.nbios[idx].dev;
 }
 
 #define HSMP_LOCK_FILE	"/var/lock/hsmp"
@@ -473,9 +481,9 @@ static int hsmp_probe(void)
 	 * version messages take no arguments and return one.
 	 */
 	socket_found = 0;
-	for (socket_id = 0; socket_id < MAX_NBIOS; socket_id += 4) {
-		if (!hsmp_data.nbios[socket_id].dev)
-			continue;
+	for (socket_id = 0; socket_id < MAX_SOCKETS; socket_id++) {
+		if (!socket_id_to_dev(socket_id))
+			break;
 
 		msg.msg_num = HSMP_TEST;
 		msg.num_args = 1;
@@ -484,14 +492,14 @@ static int hsmp_probe(void)
 
 		err = hsmp_send_message(socket_id, &msg);
 		if (err) {
-			pr_debug("HSMP Test failed for nbio[%d]\n", socket_id / 4);
+			pr_debug("HSMP Test failed for socket %d\n", socket_id);
 			errno = ENOTSUP;
 			return -1;
 		}
 
 		if (msg.response[0] != msg.args[0] + 1) {
-			pr_debug("HSMP test failed for nbio[%d], expected %x, received %x\n",
-				 socket_id / 4, msg.args[0] + 1, msg.response[0]);
+			pr_debug("HSMP test failed for socket %d, expected %x, received %x\n",
+				 socket_id, msg.args[0] + 1, msg.response[0]);
 			errno = ENOTSUP;
 			return -1;
 		}
@@ -1063,9 +1071,9 @@ int hsmp_set_system_boost_limit(u32 boost_limit)
 	if (err)
 		return -1;
 
-	for (socket_id = 0; socket_id < MAX_NBIOS; socket_id++) {
-		if (!hsmp_data.nbios[socket_id].dev)
-			continue;
+	for (socket_id = 0; socket_id < MAX_SOCKETS; socket_id++) {
+		if (!socket_id_to_dev(socket_id))
+			break;
 
 		err = _set_socket_boost_limit(socket_id, boost_limit);
 		if (err)
@@ -1187,9 +1195,9 @@ int hsmp_set_xgmi_pstate(enum hsmp_xgmi_pstate pstate)
 	msg.num_args = 1;
 	msg.args[0] = (min << 8) | max;
 
-	for (socket_id = 0; socket_id < MAX_NBIOS; socket_id++) {
-		if (!hsmp_data.nbios[socket_id].dev)
-			continue;
+	for (socket_id = 0; socket_id < MAX_SOCKETS; socket_id++) {
+		if (!socket_id_to_dev(socket_id))
+			break;
 
 		err = hsmp_send_message(socket_id, &msg);
 		if (err)
