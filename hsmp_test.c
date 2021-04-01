@@ -594,7 +594,7 @@ void test_df_pstate(void)
 
 void test_fabric_clocks(void)
 {
-	int clock;
+	int mem_clock, df_clock;
 	int rc;
 
 	printf("Testing hsmp_memory_clock()...\n");
@@ -604,15 +604,15 @@ void test_fabric_clocks(void)
 	eval_for_failure(rc);
 
 	pr_fmt("Testing memory clock with invalid socket id ");
-	rc = hsmp_memory_clock(-1, &clock);
+	rc = hsmp_memory_clock(-1, &mem_clock);
 	eval_for_failure(rc);
 
 	pr_fmt("Testing memory clock ");
-	rc = hsmp_memory_clock(0, &clock);
+	rc = hsmp_memory_clock(0, &mem_clock);
 	eval_for_pass(rc);
 
 	if (test_passed && privileged_user && !hsmp_disabled)
-		pr_note("memory clock %d\n", clock);
+		pr_note("memory clock %d\n", mem_clock);
 
 	printf("Testing hsmp_data_fabric_clock()...\n");
 
@@ -621,15 +621,24 @@ void test_fabric_clocks(void)
 	eval_for_failure(rc);
 
 	pr_fmt("Testing data fabroic clock with invalid socket id ");
-	rc = hsmp_data_fabric_clock(-1, &clock);
+	rc = hsmp_data_fabric_clock(-1, &df_clock);
 	eval_for_failure(rc);
 
 	pr_fmt("Testing data fabric clock ");
-	rc = hsmp_data_fabric_clock(0, &clock);
+	rc = hsmp_data_fabric_clock(0, &df_clock);
 	eval_for_pass(rc);
 
 	if (test_passed && privileged_user && !hsmp_disabled)
-		pr_note("data fabrick clock %d\n");
+		pr_note("data fabric clock %d\n", df_clock);
+
+	printf("Testing hsmp_fabric_clocks()...\n");
+
+	pr_fmt("Testing fabric clocks ");
+	rc = hsmp_fabric_clocks(0, &df_clock, &mem_clock);
+	eval_for_pass(rc);
+
+	if (test_passed && privileged_user && !hsmp_disabled)
+		pr_note("df clock %d, memory clock %d\n", df_clock, mem_clock);
 }
 
 void test_core_clock_max(void)
