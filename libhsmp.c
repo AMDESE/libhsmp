@@ -1400,8 +1400,8 @@ int hsmp_next_bus(int idx, u8 *bus_num)
 	return idx + 1;
 }
 
-static int get_ddr_bandwidth_data(int socket_id, u32 *max_bw,
-				  u32 *utilized_bw, u32 *bw_pct)
+int hsmp_ddr_bandwidths(int socket_id, u32 *max_bw,
+			u32 *utilized_bw, u32 *utilized_pct)
 {
 	struct hsmp_message msg = { 0 };
 	u32 result;
@@ -1411,7 +1411,7 @@ static int get_ddr_bandwidth_data(int socket_id, u32 *max_bw,
 	if (err)
 		return -1;
 
-	if (!max_bw && !utilized_bw && !bw_pct) {
+	if (!max_bw && !utilized_bw && !utilized_pct) {
 		errno = EINVAL;
 		return -1;
 	}
@@ -1431,24 +1431,24 @@ static int get_ddr_bandwidth_data(int socket_id, u32 *max_bw,
 	if (utilized_bw)
 		*utilized_bw = (result >> 8) & 0xFFFFF;
 
-	if (bw_pct)
-		*bw_pct = result & 0xFF;
+	if (utilized_pct)
+		*utilized_pct = result & 0xFF;
 
 	return 0;
 }
 
 int hsmp_ddr_max_bandwidth(int socket_id, u32 *max_bw)
 {
-	return get_ddr_bandwidth_data(socket_id, max_bw, NULL, NULL);
+	return hsmp_ddr_bandwidths(socket_id, max_bw, NULL, NULL);
 }
 
 int hsmp_ddr_utilized_bandwidth(int socket_id, u32 *utilized_bw)
 {
-	return get_ddr_bandwidth_data(socket_id, NULL, utilized_bw, NULL);
+	return hsmp_ddr_bandwidths(socket_id, NULL, utilized_bw, NULL);
 }
 
 int hsmp_ddr_utilized_percent(int socket_id, u32 *utilized_pct)
 {
-	return get_ddr_bandwidth_data(socket_id, NULL, NULL, utilized_pct);
+	return hsmp_ddr_bandwidths(socket_id, NULL, NULL, utilized_pct);
 }
 

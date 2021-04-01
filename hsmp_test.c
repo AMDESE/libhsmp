@@ -248,7 +248,7 @@ void test_interface_version(void)
 
 void test_hsmp_ddr(void)
 {
-	u32 bw;
+	u32 bw, u_bw, pct_bw;
 	int rc;
 
 	if (interface_version < 3)
@@ -281,16 +281,16 @@ void test_hsmp_ddr(void)
 	eval_for_failure(rc);
 
 	pr_fmt("Testing with invalid socket_id ");
-	rc = hsmp_ddr_utilized_bandwidth(-1, &bw);
+	rc = hsmp_ddr_utilized_bandwidth(-1, &u_bw);
 	eval_for_failure(rc);
 
 	pr_fmt("Testing with valid utilized bandwidth pointer ");
-	rc = hsmp_ddr_utilized_bandwidth(0, &bw);
+	rc = hsmp_ddr_utilized_bandwidth(0, &u_bw);
 	eval_for_pass(rc);
 
 	if (test_passed && privileged_user &&
 	    !(hsmp_disabled || unsupported_interface))
-		pr_note("utilized bandwidth is %d\n", bw);
+		pr_note("utilized bandwidth is %d\n", u_bw);
 
 	printf("Testing %s hsmp_ddr_utilized_percent()...\n",
 	       unsupported_interface ? "unsupported" : "");
@@ -300,16 +300,28 @@ void test_hsmp_ddr(void)
 	eval_for_failure(rc);
 
 	pr_fmt("Testing with invalid socket_id ");
-	rc = hsmp_ddr_utilized_percent(-1, &bw);
+	rc = hsmp_ddr_utilized_percent(-1, &pct_bw);
 	eval_for_failure(rc);
 
 	pr_fmt("Testing with valid utilized pct bandwidth pointer ");
-	rc = hsmp_ddr_utilized_percent(0, &bw);
+	rc = hsmp_ddr_utilized_percent(0, &pct_bw);
 	eval_for_pass(rc);
 
 	if (test_passed && privileged_user &&
 	    !(hsmp_disabled || unsupported_interface))
-		pr_note("utilized percent is %d\n", bw);
+		pr_note("utilized percent is %d\n", pct_bw);
+
+	printf("Testing %s hsmp_ddr_bandwidths()...\n",
+	       unsupported_interface ? "unsupported" : "");
+
+	pr_fmt("Testing DDR bandwidths  ");
+	rc = hsmp_ddr_bandwidths(0, &bw, &u_bw, &pct_bw);
+	eval_for_pass(rc);
+
+	if (test_passed && privileged_user &&
+	    !(hsmp_disabled || unsupported_interface))
+		pr_note("max bw:%d, utilized %d:, percent %d\n",
+			bw, u_bw, pct_bw);
 
 	unsupported_interface = 0;
 }

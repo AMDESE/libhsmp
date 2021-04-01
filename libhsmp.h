@@ -206,6 +206,14 @@ int hsmp_set_nbio_pstate(u8 bus_num, enum hsmp_nbio_pstate pstate);
 int hsmp_next_bus(int idx, u8 *bus_num);
 
 /*
+ * Get the theoretical maximum DDR bandwidth in GB/s, the current utilized
+ * DDR bandwidth (read + write) in GB/s, and the current utilized DDR bandwidth
+ * as a percentage of the theoretical maximum for the specified socket.
+ */
+int hsmp_ddr_bandwidths(int socket_id, u32 *max_bw, u32 *utilized_bw,
+			u32 *utilized_pct);
+
+/*
  * Get the theoretical maximum DDR bandwidth in GB/s for the specified socket.
  *
  * Only available on systems with hsmp interface version >= 3.
