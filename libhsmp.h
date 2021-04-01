@@ -148,8 +148,8 @@ enum hsmp_df_pstate {
 	HSMP_DF_PSTATE_3,
 };
 
-/* Set the data fabric P-state. */
-int hsmp_set_data_fabric_pstate(enum hsmp_df_pstate pstate);
+/* Set the data fabric P-state for the specified socket. */
+int hsmp_set_data_fabric_pstate(int sokcet, enum hsmp_df_pstate pstate);
 
 /* Get the current data fabric clock (in MHz) for the specified socket. */
 int hsmp_data_fabric_clock(int socket_id, int *data_fabric_clock);

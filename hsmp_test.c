@@ -556,33 +556,39 @@ void test_df_pstate(void)
 	printf("Testing hsmp_set_data_fabric_pstate()...\n");
 
 	df_pstate = 42;
+
 	pr_fmt("Testing DF pstate with invalid pstate %d ", df_pstate);
-	rc = hsmp_set_data_fabric_pstate(df_pstate);
+	rc = hsmp_set_data_fabric_pstate(0, df_pstate);
 	eval_for_failure(rc);
 
 	df_pstate = HSMP_DF_PSTATE_AUTO;
+
+	pr_fmt("Testing DF pstate with invalid scoket_id ");
+	rc = hsmp_set_data_fabric_pstate(-1, df_pstate);
+	eval_for_failure(rc);
+
 	pr_fmt("Testing DF pstate HSMP_DF_PSTATE_AUTO (%d) ", df_pstate);
-	rc = hsmp_set_data_fabric_pstate(df_pstate);
+	rc = hsmp_set_data_fabric_pstate(0, df_pstate);
 	eval_for_pass(rc);
 
 	df_pstate = HSMP_DF_PSTATE_0;
 	pr_fmt("Testing DF pstate HSMP_DF_PSTATE_0 (%d) ", df_pstate);
-	rc = hsmp_set_data_fabric_pstate(df_pstate);
+	rc = hsmp_set_data_fabric_pstate(0, df_pstate);
 	eval_for_pass(rc);
 
 	df_pstate = HSMP_DF_PSTATE_1;
 	pr_fmt("Testing DF pstate HSMP_DF_PSTATE_1 (%d) ", df_pstate);
-	rc = hsmp_set_data_fabric_pstate(df_pstate);
+	rc = hsmp_set_data_fabric_pstate(0, df_pstate);
 	eval_for_pass(rc);
 
 	df_pstate = HSMP_DF_PSTATE_2;
 	pr_fmt("Testing DF pstate HSMP_DF_PSTATE_2 (%d) ", df_pstate);
-	rc = hsmp_set_data_fabric_pstate(df_pstate);
+	rc = hsmp_set_data_fabric_pstate(0, df_pstate);
 	eval_for_pass(rc);
 
 	df_pstate = HSMP_DF_PSTATE_3;
 	pr_fmt("Testing DF pstate HSMP_DF_PSTATE_3 (%d) ", df_pstate);
-	rc = hsmp_set_data_fabric_pstate(df_pstate);
+	rc = hsmp_set_data_fabric_pstate(0, df_pstate);
 	eval_for_pass(rc);
 }
 

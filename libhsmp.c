@@ -1218,7 +1218,7 @@ int hsmp_set_xgmi_pstate(enum hsmp_xgmi_pstate pstate)
 	return err;
 }
 
-int hsmp_set_data_fabric_pstate(enum hsmp_df_pstate pstate)
+int hsmp_set_data_fabric_pstate(int socket_id, enum hsmp_df_pstate pstate)
 {
 	struct hsmp_message msg = { 0 };
 	int err;
@@ -1246,7 +1246,7 @@ int hsmp_set_data_fabric_pstate(enum hsmp_df_pstate pstate)
 		msg.args[0] = pstate - 1; /* HW P-states numbered 0 - 3 */
 	}
 
-	return hsmp_send_message(hsmp_data.default_socket_id, &msg);
+	return hsmp_send_message(socket_id, &msg);
 }
 
 static int get_fabric_clocks(int socket_id, int *data_fabric_clock,
