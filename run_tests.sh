@@ -79,7 +79,7 @@ function print_results()
 	echo ""
 }
 
-function run_all_tests()
+function do_build()
 {
 	local settings="$@"
 
@@ -99,6 +99,13 @@ function run_all_tests()
 	log ""
 	run_cmd make
 	log ""
+}
+
+function run_all_tests()
+{
+	local settings="$@"
+
+	do_build $settings
 
 	# Run test as normal user
 	say "## Testing libhsmp as a regular user ("$settings")"
@@ -182,6 +189,12 @@ run_all_tests --enable-debug
 run_all_tests --enable-fam17
 
 run_all_tests --enable-fam17 --enable-debug
+
+# There is no real need to run all tests with debug-pci enabled
+# but we should at least do a build to ensure nothing has been
+# broken.
+
+do_build --enable-fam17 --enable-debug --enable-debug-pci
 
 # Print overall Reults
 echo "Complete test output saved in "$LOG_FILE
