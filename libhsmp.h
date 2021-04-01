@@ -151,11 +151,11 @@ enum hsmp_df_pstate {
 /* Set the data fabric P-state. */
 int hsmp_set_data_fabric_pstate(enum hsmp_df_pstate pstate);
 
-/* Get the current data fabic clock (in MHz). */
-int hsmp_data_fabric_clock(int *data_fabric_clock);
+/* Get the current data fabric clock (in MHz) for the specified socket. */
+int hsmp_data_fabric_clock(int socket_id, int *data_fabric_clock);
 
-/* Get the current memory clock (in MHZ). */
-int hsmp_memory_clock(int *mem_clock);
+/* Get the current memory clock (in MHZ) for the specified socket. */
+int hsmp_memory_clock(int socket_id, int *mem_clock);
 
 /*
  * Get the maximum core clock (in MHZ) allowed by the most restrictive

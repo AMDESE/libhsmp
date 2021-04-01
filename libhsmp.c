@@ -1249,7 +1249,8 @@ int hsmp_set_data_fabric_pstate(enum hsmp_df_pstate pstate)
 	return hsmp_send_message(hsmp_data.default_socket_id, &msg);
 }
 
-static int get_fabric_clocks(int *data_fabric_clock, int *mem_clock)
+static int get_fabric_clocks(int socket_id, int *data_fabric_clock,
+			     int *mem_clock)
 {
 	struct hsmp_message msg = { 0 };
 	int err;
@@ -1266,7 +1267,7 @@ static int get_fabric_clocks(int *data_fabric_clock, int *mem_clock)
 	msg.msg_num = HSMP_GET_FCLK_MCLK;
 	msg.response_sz = 2;
 
-	err = hsmp_send_message(hsmp_data.default_socket_id, &msg);
+	err = hsmp_send_message(socket_id, &msg);
 	if (err)
 		return err;
 
@@ -1279,14 +1280,14 @@ static int get_fabric_clocks(int *data_fabric_clock, int *mem_clock)
 	return 0;
 }
 
-int hsmp_data_fabric_clock(int *data_fabric_clock)
+int hsmp_data_fabric_clock(int socket_id, int *data_fabric_clock)
 {
-	return get_fabric_clocks(data_fabric_clock, NULL);
+	return get_fabric_clocks(socket_id, data_fabric_clock, NULL);
 }
 
-int hsmp_memory_clock(int *mem_clock)
+int hsmp_memory_clock(int socket_id, int *mem_clock)
 {
-	return get_fabric_clocks(NULL, mem_clock);
+	return get_fabric_clocks(socket_id, NULL, mem_clock);
 }
 
 int hsmp_core_clock_max_frequency(int socket_id, u32 *max_freq)

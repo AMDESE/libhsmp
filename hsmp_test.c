@@ -582,11 +582,15 @@ void test_fabric_clocks(void)
 	printf("Testing hsmp_memory_clock()...\n");
 
 	pr_fmt("Testing with NULL memory clock pointer ");
-	rc = hsmp_memory_clock(NULL);
+	rc = hsmp_memory_clock(0, NULL);
+	eval_for_failure(rc);
+
+	pr_fmt("Testing memory clock with invalid socket id ");
+	rc = hsmp_memory_clock(-1, &clock);
 	eval_for_failure(rc);
 
 	pr_fmt("Testing memory clock ");
-	rc = hsmp_memory_clock(&clock);
+	rc = hsmp_memory_clock(0, &clock);
 	eval_for_pass(rc);
 
 	if (test_passed && privileged_user && !hsmp_disabled)
@@ -595,11 +599,15 @@ void test_fabric_clocks(void)
 	printf("Testing hsmp_data_fabric_clock()...\n");
 
 	pr_fmt("Testing with NULL data fabric clock pointer ");
-	rc = hsmp_data_fabric_clock(NULL);
+	rc = hsmp_data_fabric_clock(0, NULL);
+	eval_for_failure(rc);
+
+	pr_fmt("Testing data fabroic clock with invalid socket id ");
+	rc = hsmp_data_fabric_clock(-1, &clock);
 	eval_for_failure(rc);
 
 	pr_fmt("Testing data fabric clock ");
-	rc = hsmp_data_fabric_clock(&clock);
+	rc = hsmp_data_fabric_clock(0, &clock);
 	eval_for_pass(rc);
 
 	if (test_passed && privileged_user && !hsmp_disabled)
