@@ -41,6 +41,12 @@ int failed_tests;
 int verbose = 0;
 int privileged_user = 0;
 
+#define TEST_INDENT	"    "
+#define TEST_BUF_SZ	1024
+char test_buf[TEST_BUF_SZ];
+char *test_buffer = &test_buf[0];
+int buf_offset;
+
 unsigned int cpu_family;
 unsigned int cpu_model;
 
@@ -49,38 +55,30 @@ struct hsmp_testcase {
 	void (*func)(void);
 };
 
-int _pr_fmt(int note, const char *fmt, va_list vargs)
-{
-	int len;
-
-	len = printf("    ");
-	if (note)
-		len += printf("- ");
-
-	len += vprintf(fmt, vargs);
-
-	return len;
-}
-
-int pr_fmt(const char *fmt, ...)
+int pr_test_start(const char *fmt, ...)
 {
 	va_list vargs;
-	int len;
+
+	memset(test_buffer, 0, TEST_BUF_SZ);
+	buf_offset = 0;
+
+	buf_offset = sprintf(test_buffer, TEST_INDENT);
 
 	va_start(vargs, fmt);
-	len = _pr_fmt(0, fmt, vargs);
+	buf_offset += vsprintf(test_buffer + buf_offset, fmt, vargs);
 	va_end(vargs);
 
-	return len;
+	return buf_offset;
 }
 
-int pr_note(const char *fmt, ...)
+int pr_test_note(const char *fmt, ...)
 {
 	va_list vargs;
 	int len = 0;
 
 	va_start(vargs, fmt);
-	len = _pr_fmt(1, fmt, vargs);
+	len = printf("%s- ", TEST_INDENT);
+	len += vprintf(fmt, vargs);
 	va_end(vargs);
 
 	return len;
@@ -92,7 +90,8 @@ void pr_pass(void)
 	passed_tests++;
 	test_passed = 1;
 
-	printf("=> PASSED\n");
+	sprintf(test_buffer + buf_offset, "=> PASSED\n");
+	printf("%s", test_buffer);
 }
 
 void pr_fail(int rc)
@@ -101,9 +100,11 @@ void pr_fail(int rc)
 	failed_tests++;
 	test_passed = 0;
 
-	printf("=> FAILED\n");
+	sprintf(test_buffer + buf_offset, "=> FAILED\n");
+	printf("%s", test_buffer);
+
 	if (rc)
-		pr_note("Received unexpected error: %s\n", hsmp_strerror(rc, errno));
+		pr_test_note("Received unexpected error: %s\n", hsmp_strerror(rc, errno));
 }
 
 #define einval_error(_r, _e)	((_r) == -1 && (_e) == EINVAL)
@@ -131,7 +132,7 @@ void eval_for_failure(int rc)
 	if (rc == 0) {
 		/* expected failure */
 		pr_fail(rc);
-		pr_note("Expected test failure but received rc == 0\n");
+		pr_test_note("Expected test failure but received rc == 0\n");
 		return;
 	}
 
@@ -139,16 +140,16 @@ void eval_for_failure(int rc)
 		if (enotsup_error(rc, errno) &&
 		    (hsmp_disabled || unsupported_interface || cpu_family < 0x19)) {
 			pr_pass();
-			pr_note("received expected ENOTSUP return code\n");
+			pr_test_note("received expected ENOTSUP return code\n");
 			return;
 		} else if (einval_error(rc, errno)) {
 			pr_pass();
-			pr_note("received expected EINVAL return code\n");
+			pr_test_note("received expected EINVAL return code\n");
 			return;
 		}
 	} else if (eperm_error(rc, errno)) {
 		pr_pass();
-		pr_note("received expected EPERM return code\n");
+		pr_test_note("received expected EPERM return code\n");
 		return;
 	}
 
@@ -169,12 +170,12 @@ void eval_for_pass_results(int rc, int expected, int result)
 		if (enotsup_error(rc, errno) &&
 		    (hsmp_disabled || unsupported_interface || cpu_family < 0x19)) {
 			pr_pass();
-			pr_note("received expected ENOTSUP return code\n");
+			pr_test_note("received expected ENOTSUP return code\n");
 			return;
 		}
 	} else if (eperm_error(rc, errno)) {
 		pr_pass();
-		pr_note("received expected EPERM return code\n");
+		pr_test_note("received expected EPERM return code\n");
 		return;
 	}
 
@@ -213,18 +214,18 @@ void test_smu_fw_version(void)
 
 	printf("Testing hsmp_smu_fw_version()...\n");
 
-	pr_fmt("Testing with NULL SMU fw version pointer ");
+	pr_test_start("Testing with NULL SMU fw version pointer ");
 	rc = hsmp_smu_fw_version(NULL);
 	eval_for_failure(rc);
 
-	pr_fmt("Testing with valid SMU fw version pointer ");
+	pr_test_start("Testing with valid SMU fw version pointer ");
 	rc = hsmp_smu_fw_version(&smu_fw);
 	eval_for_pass(rc);
 
 	if (test_passed && privileged_user &&
 	    !(enotsup_error(rc, errno) && hsmp_disabled))
-		pr_fmt("** SMU fw version %d.%d.%d\n", smu_fw.major,
-		       smu_fw.minor, smu_fw.debug);
+		pr_test_note("** SMU fw version %d.%d.%d\n", smu_fw.major,
+			     smu_fw.minor, smu_fw.debug);
 }
 
 void test_interface_version(void)
@@ -233,17 +234,17 @@ void test_interface_version(void)
 
 	printf("Testing hsmp_interface_version()...\n");
 
-	pr_fmt("Testing with NULL interface version pointer ");
+	pr_test_start("Testing with NULL interface version pointer ");
 	rc = hsmp_interface_version(NULL);
 	eval_for_failure(rc);
 
-	pr_fmt("Testing with valid interface version pointer ");
+	pr_test_start("Testing with valid interface version pointer ");
 	rc = hsmp_interface_version(&interface_version);
 	eval_for_pass(rc);
 
 	if (test_passed && privileged_user &&
 	    !(enotsup_error(rc, errno) && hsmp_disabled))
-		pr_fmt("** HSMP Interface Version %d\n", interface_version);
+		pr_test_note("** HSMP Interface Version %d\n", interface_version);
 }
 
 void test_hsmp_ddr(void)
@@ -257,71 +258,71 @@ void test_hsmp_ddr(void)
 	printf("Testing %s hsmp_ddr_max_bandwidth()...\n",
 	       unsupported_interface ? "unsupported" : "");
 
-	pr_fmt("Testing with NULL max bandwidth pointer ");
+	pr_test_start("Testing with NULL max bandwidth pointer ");
 	rc = hsmp_ddr_max_bandwidth(0, NULL);
 	eval_for_failure(rc);
 
-	pr_fmt("Testing with invalid socket_id ");
+	pr_test_start("Testing with invalid socket_id ");
 	rc = hsmp_ddr_max_bandwidth(-1, &bw);
 	eval_for_failure(rc);
 
-	pr_fmt("Testing with valid bandwidth pointer ");
+	pr_test_start("Testing with valid bandwidth pointer ");
 	rc = hsmp_ddr_max_bandwidth(0, &bw);
 	eval_for_pass(rc);
 
 	if (test_passed && privileged_user &&
 	    !(hsmp_disabled || unsupported_interface))
-		pr_note("max bandwidth is %d\n", bw);
+		pr_test_note("max bandwidth is %d\n", bw);
 
 	printf("Testing %s hsmp_ddr_utilized_bandwidth()...\n",
 	       unsupported_interface ? "unsupported" : "");
 
-	pr_fmt("Testing with NULL utilized bandwidth pointer ");
+	pr_test_start("Testing with NULL utilized bandwidth pointer ");
 	rc = hsmp_ddr_utilized_bandwidth(0, NULL);
 	eval_for_failure(rc);
 
-	pr_fmt("Testing with invalid socket_id ");
+	pr_test_start("Testing with invalid socket_id ");
 	rc = hsmp_ddr_utilized_bandwidth(-1, &u_bw);
 	eval_for_failure(rc);
 
-	pr_fmt("Testing with valid utilized bandwidth pointer ");
+	pr_test_start("Testing with valid utilized bandwidth pointer ");
 	rc = hsmp_ddr_utilized_bandwidth(0, &u_bw);
 	eval_for_pass(rc);
 
 	if (test_passed && privileged_user &&
 	    !(hsmp_disabled || unsupported_interface))
-		pr_note("utilized bandwidth is %d\n", u_bw);
+		pr_test_note("utilized bandwidth is %d\n", u_bw);
 
 	printf("Testing %s hsmp_ddr_utilized_percent()...\n",
 	       unsupported_interface ? "unsupported" : "");
 
-	pr_fmt("Testing with NULL utilized percent pointer ");
+	pr_test_start("Testing with NULL utilized percent pointer ");
 	rc = hsmp_ddr_utilized_percent(0, NULL);
 	eval_for_failure(rc);
 
-	pr_fmt("Testing with invalid socket_id ");
+	pr_test_start("Testing with invalid socket_id ");
 	rc = hsmp_ddr_utilized_percent(-1, &pct_bw);
 	eval_for_failure(rc);
 
-	pr_fmt("Testing with valid utilized pct bandwidth pointer ");
+	pr_test_start("Testing with valid utilized pct bandwidth pointer ");
 	rc = hsmp_ddr_utilized_percent(0, &pct_bw);
 	eval_for_pass(rc);
 
 	if (test_passed && privileged_user &&
 	    !(hsmp_disabled || unsupported_interface))
-		pr_note("utilized percent is %d\n", pct_bw);
+		pr_test_note("utilized percent is %d\n", pct_bw);
 
 	printf("Testing %s hsmp_ddr_bandwidths()...\n",
 	       unsupported_interface ? "unsupported" : "");
 
-	pr_fmt("Testing DDR bandwidths  ");
+	pr_test_start("Testing DDR bandwidths  ");
 	rc = hsmp_ddr_bandwidths(0, &bw, &u_bw, &pct_bw);
 	eval_for_pass(rc);
 
 	if (test_passed && privileged_user &&
 	    !(hsmp_disabled || unsupported_interface))
-		pr_note("max bw:%d, utilized %d:, percent %d\n",
-			bw, u_bw, pct_bw);
+		pr_test_note("max bw:%d, utilized %d:, percent %d\n",
+			     bw, u_bw, pct_bw);
 
 	unsupported_interface = 0;
 }
@@ -342,7 +343,7 @@ void test_hsmp_boost_limit(void)
 	 */
 #if 0
 	set_limit = -1;
-	pr_fmt("Testing cpu boost limit with invalid boost limit -1 ");
+	pr_test_start("Testing cpu boost limit with invalid boost limit -1 ");
 	rc = hsmp_set_cpu_boost_limit(0, set_limit);
 	eval_for_pass(rc);
 #endif
@@ -357,49 +358,49 @@ void test_hsmp_boost_limit(void)
 	 * frequency range of the processor"
 	 */
 	set_limit = 0x7d0;
-	pr_fmt("Testing with invalid CPU ");
+	pr_test_start("Testing with invalid CPU ");
 	rc = hsmp_set_cpu_boost_limit(-1, set_limit);
 	eval_for_failure(rc);
 
-	pr_fmt("Testing setting CPU 0 boost limit to %x ", set_limit);
+	pr_test_start("Testing setting CPU 0 boost limit to %x ", set_limit);
 	rc = hsmp_set_cpu_boost_limit(0, set_limit);
 	eval_for_pass(rc);
 
 	printf("Testing hsmp_cpu_boost_limit()...\n");
 
-	pr_fmt("Testing reading CPU 0 boost limit ");
+	pr_test_start("Testing reading CPU 0 boost limit ");
 	rc = hsmp_cpu_boost_limit(0, &limit);
 	eval_for_pass_results(rc, limit, set_limit);
 
 	if (privileged_user && !hsmp_disabled) {
 		if (test_passed)
-			pr_note("CPU 0 boost limit %d\n", limit);
+			pr_test_note("CPU 0 boost limit %d\n", limit);
 		else
-			pr_note("CPU boost limit returned incorrect value 0x%x instead of 0x%x\n",
-				limit, set_limit);
+			pr_test_note("CPU boost limit returned incorrect value 0x%x instead of 0x%x\n",
+				     limit, set_limit);
 	}
 
-	pr_fmt("Testing with NULL cpu boost limit pointer ");
+	pr_test_start("Testing with NULL cpu boost limit pointer ");
 	rc = hsmp_cpu_boost_limit(0, NULL);
 	eval_for_failure(rc);
 
-	pr_fmt("Testing reading CPU boost limit with invalid CPU ");
+	pr_test_start("Testing reading CPU boost limit with invalid CPU ");
 	rc = hsmp_cpu_boost_limit(-1, &limit);
 	eval_for_failure(rc);
 
 	printf("Testing hsmp_set_socket_boost_limit()...\n");
 
-	pr_fmt("Testing setting socket boost limit with invalid socket id ");
+	pr_test_start("Testing setting socket boost limit with invalid socket id ");
 	rc = hsmp_set_socket_boost_limit(-1, set_limit);
 	eval_for_failure(rc);
 
-	pr_fmt("Testing setting socket 0 boost limit to 0x%x ", set_limit);
+	pr_test_start("Testing setting socket 0 boost limit to 0x%x ", set_limit);
 	rc = hsmp_set_socket_boost_limit(0, set_limit);
 	eval_for_pass(rc);
 
 	printf("Testing hsmp_set_system_boost_limit()...\n");
 
-	pr_fmt("Testing setting system boost limit a to 0x%x ", set_limit);
+	pr_test_start("Testing setting system boost limit a to 0x%x ", set_limit);
 	rc = hsmp_set_system_boost_limit(set_limit);
 	eval_for_pass(rc);
 }
@@ -411,22 +412,22 @@ void test_hsmp_xgmi(void)
 
 	printf("Testing hsmp_set_xgmi_pstate()...\n");
 
-	pr_fmt("Testing xgmi pstate invalid value 5 ");
+	pr_test_start("Testing xgmi pstate invalid value 5 ");
 	rc = hsmp_set_xgmi_pstate(5);
 	eval_for_failure(rc);
 
 	xgmi_pstate = HSMP_XGMI_PSTATE_DYNAMIC;
-	pr_fmt("Testing HSMP_XGMI_PSTATE_DYNAMIC (%d) ", xgmi_pstate);
+	pr_test_start("Testing HSMP_XGMI_PSTATE_DYNAMIC (%d) ", xgmi_pstate);
 	rc = hsmp_set_xgmi_pstate(xgmi_pstate);
 	eval_for_pass(rc);
 
 	xgmi_pstate = HSMP_XGMI_PSTATE_X2;
-	pr_fmt("Testing HSMP_XGMI_PSTATE_X2 (%d) ", xgmi_pstate);
+	pr_test_start("Testing HSMP_XGMI_PSTATE_X2 (%d) ", xgmi_pstate);
 	rc = hsmp_set_xgmi_pstate(xgmi_pstate);
 	eval_for_pass(rc);
 
 	xgmi_pstate = HSMP_XGMI_PSTATE_X8;
-	pr_fmt("Testing HSMP_XGMI_PSTATE_X8 (%d) ", xgmi_pstate);
+	pr_test_start("Testing HSMP_XGMI_PSTATE_X8 (%d) ", xgmi_pstate);
 	rc = hsmp_set_xgmi_pstate(xgmi_pstate);
 	eval_for_pass(rc);
 
@@ -435,8 +436,8 @@ void test_hsmp_xgmi(void)
 		unsupported_interface = 1;
 
 	xgmi_pstate = HSMP_XGMI_PSTATE_X16;
-	pr_fmt("Testing %sHSMP_XGMI_PSTATE_X16 (%d) ",
-	       unsupported_interface ? "unsupported " : "", xgmi_pstate);
+	pr_test_start("Testing %sHSMP_XGMI_PSTATE_X16 (%d) ",
+		      unsupported_interface ? "unsupported " : "", xgmi_pstate);
 	rc = hsmp_set_xgmi_pstate(xgmi_pstate);
 	if (unsupported_interface)
 		eval_for_failure(rc);
@@ -453,20 +454,20 @@ void test_hsmp_socket_power(void)
 
 	printf("Testing hsmp_socket_power()...\n");
 
-	pr_fmt("Testing with NULL power pointer ");
+	pr_test_start("Testing with NULL power pointer ");
 	rc = hsmp_socket_power(0, NULL);
 	eval_for_failure(rc);
 
-	pr_fmt("Testing socket power with invalid socket_id ");
+	pr_test_start("Testing socket power with invalid socket_id ");
 	rc = hsmp_socket_power(-1, &power);
 	eval_for_failure(rc);
 
-	pr_fmt("Testing socket power with socket id 0 ");
+	pr_test_start("Testing socket power with socket id 0 ");
 	rc = hsmp_socket_power(0, &power);
 	eval_for_pass(rc);
 
 	if (test_passed && privileged_user && !hsmp_disabled)
-		pr_note("Socket power 0x%x\n", power);
+		pr_test_note("Socket power 0x%x\n", power);
 
 	printf("Testing hsmp_set_socket_power_limit()...\n");
 	limit = 120000;
@@ -484,57 +485,57 @@ void test_hsmp_socket_power(void)
 	 * power limit to use.
 	 */
 #if 0
-	pr_fmt("Testing socket power limit with invalid limit -1 ");
+	pr_test_start("Testing socket power limit with invalid limit -1 ");
 	rc = hsmp_set_socket_power_limit(0, -1);
 	eval_for_pass(rc);
 #endif
 
-	pr_fmt("Testing socket power limit with invalid socket id ");
+	pr_test_start("Testing socket power limit with invalid socket id ");
 	rc = hsmp_set_socket_power_limit(-1, limit);
 	eval_for_failure(rc);
 
-	pr_fmt("Testing set socket power limit to %d for socket 0 ", limit);
+	pr_test_start("Testing set socket power limit to %d for socket 0 ", limit);
 	rc = hsmp_set_socket_power_limit(0, limit);
 	eval_for_pass(rc);
 
 	printf("Testing hsmp_socket_power_limit()...\n");
 
-	pr_fmt("Testing socket power limit for socket 0 ");
+	pr_test_start("Testing socket power limit for socket 0 ");
 	rc = hsmp_socket_power_limit(0, &power);
 	eval_for_pass_results(rc, power, limit);
 
 	if (privileged_user && !hsmp_disabled) {
 		if (test_passed)
-			pr_note("Socket power reported %d\n", power);
+			pr_test_note("Socket power reported %d\n", power);
 		else
-			pr_note("Socket power returned %d instead of %d\n",
-				power, limit);
+			pr_test_note("Socket power returned %d instead of %d\n",
+				     power, limit);
 	}
 
-	pr_fmt("Testing with NULL socket power limit pointer ");
+	pr_test_start("Testing with NULL socket power limit pointer ");
 	rc = hsmp_socket_power_limit(0, NULL);
 	eval_for_failure(rc);
 
-	pr_fmt("Testing socket power limit with invalid socket id ");
+	pr_test_start("Testing socket power limit with invalid socket id ");
 	rc = hsmp_socket_power_limit(-1, &limit);
 	eval_for_failure(rc);
 
 	printf("Testing hsmp_socket_max_power_limit()...\n");
 
-	pr_fmt("Testing with NULL max power limit pointer ");
+	pr_test_start("Testing with NULL max power limit pointer ");
 	rc = hsmp_socket_max_power_limit(0, NULL);
 	eval_for_failure(rc);
 
-	pr_fmt("Testing max socket power limit with invalid socket id ");
+	pr_test_start("Testing max socket power limit with invalid socket id ");
 	rc = hsmp_socket_max_power_limit(-1, &limit);
 	eval_for_failure(rc);
 
-	pr_fmt("Testing socket power max limit for socket 0 ");
+	pr_test_start("Testing socket power max limit for socket 0 ");
 	rc = hsmp_socket_max_power_limit(0, &limit);
 	eval_for_pass(rc);
 
 	if (test_passed && privileged_user && !hsmp_disabled)
-		pr_note("socket 0 max limit %d\n", limit);
+		pr_test_note("socket 0 max limit %d\n", limit);
 }
 
 void test_proc_hot_status(void)
@@ -544,20 +545,20 @@ void test_proc_hot_status(void)
 
 	printf("Testing hsmp_proc_hot_status()...\n");
 
-	pr_fmt("Testing with NULL proc hot pointer ");
+	pr_test_start("Testing with NULL proc hot pointer ");
 	rc = hsmp_proc_hot_status(0, NULL);
 	eval_for_failure(rc);
 
-	pr_fmt("Testing proc hot with invalid socket id ");
+	pr_test_start("Testing proc hot with invalid socket id ");
 	rc = hsmp_proc_hot_status(-1, &proc_hot);
 	eval_for_failure(rc);
 
-	pr_fmt("Testing proc hot for socket 0 ");
+	pr_test_start("Testing proc hot for socket 0 ");
 	rc = hsmp_proc_hot_status(0, &proc_hot);
 	eval_for_pass(rc);
 
 	if (test_passed && privileged_user && !hsmp_disabled)
-		pr_note("proc hot = %d\n");
+		pr_test_note("proc hot = %d\n");
 }
 
 void test_df_pstate(void)
@@ -569,37 +570,37 @@ void test_df_pstate(void)
 
 	df_pstate = 42;
 
-	pr_fmt("Testing DF pstate with invalid pstate %d ", df_pstate);
+	pr_test_start("Testing DF pstate with invalid pstate %d ", df_pstate);
 	rc = hsmp_set_data_fabric_pstate(0, df_pstate);
 	eval_for_failure(rc);
 
 	df_pstate = HSMP_DF_PSTATE_AUTO;
 
-	pr_fmt("Testing DF pstate with invalid scoket_id ");
+	pr_test_start("Testing DF pstate with invalid scoket_id ");
 	rc = hsmp_set_data_fabric_pstate(-1, df_pstate);
 	eval_for_failure(rc);
 
-	pr_fmt("Testing DF pstate HSMP_DF_PSTATE_AUTO (%d) ", df_pstate);
+	pr_test_start("Testing DF pstate HSMP_DF_PSTATE_AUTO (%d) ", df_pstate);
 	rc = hsmp_set_data_fabric_pstate(0, df_pstate);
 	eval_for_pass(rc);
 
 	df_pstate = HSMP_DF_PSTATE_0;
-	pr_fmt("Testing DF pstate HSMP_DF_PSTATE_0 (%d) ", df_pstate);
+	pr_test_start("Testing DF pstate HSMP_DF_PSTATE_0 (%d) ", df_pstate);
 	rc = hsmp_set_data_fabric_pstate(0, df_pstate);
 	eval_for_pass(rc);
 
 	df_pstate = HSMP_DF_PSTATE_1;
-	pr_fmt("Testing DF pstate HSMP_DF_PSTATE_1 (%d) ", df_pstate);
+	pr_test_start("Testing DF pstate HSMP_DF_PSTATE_1 (%d) ", df_pstate);
 	rc = hsmp_set_data_fabric_pstate(0, df_pstate);
 	eval_for_pass(rc);
 
 	df_pstate = HSMP_DF_PSTATE_2;
-	pr_fmt("Testing DF pstate HSMP_DF_PSTATE_2 (%d) ", df_pstate);
+	pr_test_start("Testing DF pstate HSMP_DF_PSTATE_2 (%d) ", df_pstate);
 	rc = hsmp_set_data_fabric_pstate(0, df_pstate);
 	eval_for_pass(rc);
 
 	df_pstate = HSMP_DF_PSTATE_3;
-	pr_fmt("Testing DF pstate HSMP_DF_PSTATE_3 (%d) ", df_pstate);
+	pr_test_start("Testing DF pstate HSMP_DF_PSTATE_3 (%d) ", df_pstate);
 	rc = hsmp_set_data_fabric_pstate(0, df_pstate);
 	eval_for_pass(rc);
 }
@@ -611,46 +612,46 @@ void test_fabric_clocks(void)
 
 	printf("Testing hsmp_memory_clock()...\n");
 
-	pr_fmt("Testing with NULL memory clock pointer ");
+	pr_test_start("Testing with NULL memory clock pointer ");
 	rc = hsmp_memory_clock(0, NULL);
 	eval_for_failure(rc);
 
-	pr_fmt("Testing memory clock with invalid socket id ");
+	pr_test_start("Testing memory clock with invalid socket id ");
 	rc = hsmp_memory_clock(-1, &mem_clock);
 	eval_for_failure(rc);
 
-	pr_fmt("Testing memory clock ");
+	pr_test_start("Testing memory clock ");
 	rc = hsmp_memory_clock(0, &mem_clock);
 	eval_for_pass(rc);
 
 	if (test_passed && privileged_user && !hsmp_disabled)
-		pr_note("memory clock %d\n", mem_clock);
+		pr_test_note("memory clock %d\n", mem_clock);
 
 	printf("Testing hsmp_data_fabric_clock()...\n");
 
-	pr_fmt("Testing with NULL data fabric clock pointer ");
+	pr_test_start("Testing with NULL data fabric clock pointer ");
 	rc = hsmp_data_fabric_clock(0, NULL);
 	eval_for_failure(rc);
 
-	pr_fmt("Testing data fabroic clock with invalid socket id ");
+	pr_test_start("Testing data fabroic clock with invalid socket id ");
 	rc = hsmp_data_fabric_clock(-1, &df_clock);
 	eval_for_failure(rc);
 
-	pr_fmt("Testing data fabric clock ");
+	pr_test_start("Testing data fabric clock ");
 	rc = hsmp_data_fabric_clock(0, &df_clock);
 	eval_for_pass(rc);
 
 	if (test_passed && privileged_user && !hsmp_disabled)
-		pr_note("data fabric clock %d\n", df_clock);
+		pr_test_note("data fabric clock %d\n", df_clock);
 
 	printf("Testing hsmp_fabric_clocks()...\n");
 
-	pr_fmt("Testing fabric clocks ");
+	pr_test_start("Testing fabric clocks ");
 	rc = hsmp_fabric_clocks(0, &df_clock, &mem_clock);
 	eval_for_pass(rc);
 
 	if (test_passed && privileged_user && !hsmp_disabled)
-		pr_note("df clock %d, memory clock %d\n", df_clock, mem_clock);
+		pr_test_note("df clock %d, memory clock %d\n", df_clock, mem_clock);
 }
 
 void test_core_clock_max(void)
@@ -660,20 +661,20 @@ void test_core_clock_max(void)
 
 	printf("Testing hsmp_core_clock_max_frequency()...\n");
 
-	pr_fmt("Testing with NULL core clock pointer ");
+	pr_test_start("Testing with NULL core clock pointer ");
 	rc = hsmp_core_clock_max_frequency(0, NULL);
 	eval_for_failure(rc);
 
-	pr_fmt("Reading core clock max frequency with invalid socket id ");
+	pr_test_start("Reading core clock max frequency with invalid socket id ");
 	rc = hsmp_core_clock_max_frequency(-1, &clock);
 	eval_for_failure(rc);
 
-	pr_fmt("Reading core clock max frequency for socket 0 ");
+	pr_test_start("Reading core clock max frequency for socket 0 ");
 	rc = hsmp_core_clock_max_frequency(0, &clock);
 	eval_for_pass(rc);
 
 	if (test_passed && privileged_user && !hsmp_disabled)
-		pr_note("max frequency clock is %d\n", clock);
+		pr_test_note("max frequency clock is %d\n", clock);
 }
 
 void test_c0_residency(void)
@@ -683,19 +684,19 @@ void test_c0_residency(void)
 
 	printf("Testing hsmp_c0_residency()...\n");
 
-	pr_fmt("Testing with NULL residency pointer ");
+	pr_test_start("Testing with NULL residency pointer ");
 	rc = hsmp_c0_residency(0, NULL);
 	eval_for_failure(rc);
 
-	pr_fmt("Reading C0 residency with invalid socket id ");
+	pr_test_start("Reading C0 residency with invalid socket id ");
 	rc = hsmp_c0_residency(-1, &residency);
 	eval_for_failure(rc);
 
-	pr_fmt("Reading C0 residency of socket 0 ");
+	pr_test_start("Reading C0 residency of socket 0 ");
 	rc = hsmp_c0_residency(0, &residency);
 	eval_for_pass(rc);
 	if (test_passed && privileged_user && !hsmp_disabled)
-		pr_note("C0 residency is %d\n", residency);
+		pr_test_note("C0 residency is %d\n", residency);
 }
 
 void test_nbio_pstate(void)
@@ -710,17 +711,17 @@ void test_nbio_pstate(void)
 	       unsupported_interface ? "unsupported" : "");
 
 	pstate = 5;
-	pr_fmt("Testing NBIO pstate for socket 0 with invalid pstate %x ", pstate);
+	pr_test_start("Testing NBIO pstate for socket 0 with invalid pstate %x ", pstate);
 	rc = hsmp_set_nbio_pstate(0, pstate);
 	eval_for_failure(rc);
 
 	pstate = HSMP_NBIO_PSTATE_AUTO;
-	pr_fmt("Testing HSMP_NBIO_PSTATE_AUTO pstate (%d) ", pstate);
+	pr_test_start("Testing HSMP_NBIO_PSTATE_AUTO pstate (%d) ", pstate);
 	rc = hsmp_set_nbio_pstate(0, pstate);
 	eval_for_pass(rc);
 
 	pstate = HSMP_NBIO_PSTATE_P0;
-	pr_fmt("Testing HSMP_NBIO_PSTATE_P0 pstate (%d) ", pstate);
+	pr_test_start("Testing HSMP_NBIO_PSTATE_P0 pstate (%d) ", pstate);
 	rc = hsmp_set_nbio_pstate(0, pstate);
 	eval_for_pass(rc);
 
@@ -733,38 +734,38 @@ void test_hsmp_strerror(void)
 
 	printf("Testing hsmp_errstring()...\n");
 
-	pr_fmt("Testing HSMP_ERR_INVALID_MSG_ID ");
+	pr_test_start("Testing HSMP_ERR_INVALID_MSG_ID ");
 	hsmp_errstring = hsmp_strerror(HSMP_ERR_INVALID_MSG_ID, 0);
 	if (strncmp(hsmp_errstring, "Invalid HSMP message ID", 23)) {
 		pr_fail(0);
-		pr_note("Incorrect string returned: \"%s\"\n", hsmp_errstring);
+		pr_test_note("Incorrect string returned: \"%s\"\n", hsmp_errstring);
 	} else {
 		pr_pass();
 	}
 
-	pr_fmt("Testing HSMP_ERR_INVALID_ARG ");
+	pr_test_start("Testing HSMP_ERR_INVALID_ARG ");
 	hsmp_errstring = hsmp_strerror(HSMP_ERR_INVALID_ARG, 0);
 	if (strncmp(hsmp_errstring, "Invalid HSMP argument", 21)) {
 		pr_fail(0);
-		pr_note("Incorrect string returned: \"%s\"\n", hsmp_errstring);
+		pr_test_note("Incorrect string returned: \"%s\"\n", hsmp_errstring);
 	} else {
 		pr_pass();
 	}
 
-	pr_fmt("Testing \"Success\", rc = 0 ");
+	pr_test_start("Testing \"Success\", rc = 0 ");
 	hsmp_errstring = hsmp_strerror(0, 0);
 	if (strncmp(hsmp_errstring, "Success", 7)) {
 		pr_fail(0);
-		pr_note("Incorrect string returned: \"%s\"\n", hsmp_errstring);
+		pr_test_note("Incorrect string returned: \"%s\"\n", hsmp_errstring);
 	} else {
 		pr_pass();
 	}
 
-	pr_fmt("Testing EINVAL, rc = -1 ");
+	pr_test_start("Testing EINVAL, rc = -1 ");
 	hsmp_errstring = hsmp_strerror(-1, EINVAL);
 	if (strncmp(hsmp_errstring, "Invalid argument", 16)) {
 		pr_fail(0);
-		pr_note("Incorrect string returned: \"%s\"\n", hsmp_errstring);
+		pr_test_note("Incorrect string returned: \"%s\"\n", hsmp_errstring);
 	} else {
 		pr_pass();
 	}
