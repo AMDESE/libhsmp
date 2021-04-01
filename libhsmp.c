@@ -117,7 +117,6 @@ static struct {
 	unsigned int		x86_family;		/* Family number */
 	int			initialized;
 	int			lock_fd;
-	int			default_socket_id;
 	int			hsmp_disabled;
 } hsmp_data;
 
@@ -547,7 +546,6 @@ static int hsmp_probe(void)
 			hsmp_data.hsmp_proto_ver = msg.response[0];
 			pr_debug("Interface Version: %d\n", hsmp_data.hsmp_proto_ver);
 
-			hsmp_data.default_socket_id = socket_id;
 			socket_found = 1;
 		}
 	}
