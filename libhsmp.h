@@ -154,8 +154,8 @@ int hsmp_set_data_fabric_pstate(enum hsmp_df_pstate pstate);
 /* Get the current data fabic clock (in MHz). */
 int hsmp_data_fabric_clock(int *data_fabric_clock);
 
-/* Get the current memory fabric clock (in MHZ). */
-int hsmp_memory_fabric_clock(int *mem_fabric_clock);
+/* Get the current memory clock (in MHZ). */
+int hsmp_memory_clock(int *mem_clock);
 
 /*
  * Get the maximum core clock (in MHZ) allowed by the most restrictive

@@ -579,14 +579,14 @@ void test_fabric_clocks(void)
 	int clock;
 	int rc;
 
-	printf("Testing hsmp_memory_fabric_clock()...\n");
+	printf("Testing hsmp_memory_clock()...\n");
 
 	pr_fmt("Testing with NULL memory clock pointer ");
-	rc = hsmp_memory_fabric_clock(NULL);
+	rc = hsmp_memory_clock(NULL);
 	eval_for_failure(rc);
 
 	pr_fmt("Testing memory clock ");
-	rc = hsmp_memory_fabric_clock(&clock);
+	rc = hsmp_memory_clock(&clock);
 	eval_for_pass(rc);
 
 	if (test_passed && privileged_user && !hsmp_disabled)
