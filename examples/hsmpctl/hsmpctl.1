@@ -1,0 +1,322 @@
+.\" SPDX-License-Identifier: MIT License
+.\"
+.\" Copyright (C) 2020 Advanced Micro Devices, Inc. - All Rights Reserved
+.\"
+.\" Author: Nathan Fontenot <nathan.fontenot@amd.com>
+
+.TH HSMPCTL "1" "03/12/2021" "" "hsmpctl Manual"
+.SH NAME
+\fBhsmpctl\fP \- Shows and sets Host System Management Port (HSMP) values
+.SH SYNOPSIS
+.ft B
+.B hsmpctl [ \-c cpu ] [ \-s socket ] [ \-b bus ] [ \-a ] <command> [ARGS]
+
+.B hsmpctl \-l|\-\-list
+
+.B hsmpctl \-h|\-\-help
+
+.SH DESCRIPTION
+\fBhsmpctl\fP provides a user interface to the Host System Management
+Port (HSMP) mailboxes implemented by firmware in the System Management
+Unit (SMU).
+
+.SH DISCLAIMER
+\fBhsmpctl\fP is only supported on AMD Family 19h (including
+third-generation AMD EPYC processors (codenamed "Milan")) or later
+CPUs. Using the \fBhsmpctl \fP command on earlier CPUs could produce
+unexpected results, and may cause the processor to operate outside
+of your motherboard or system specifications. Correspondingly,
+\fBhsmpctl \fP defaults to only working on AMD Family 19h and later CPUs.
+
+.SH NOTES
+In order to provide access to HSMP mailboxes the hsmpctl command relies
+on a hsmpctld daemon which must run with roo provileges. This is used as
+an intermediary between the hsmpctl command and libhsmp. Root access is
+required to access all HSMP mailboxes, the hsmpctld provides the ability
+to access these mailboxes and in turn allow for user level read access
+to HSMP mailboxes. The hsmpctl command requires root privileges to
+write to any HSMP mailbox, commands requiring root permissions are
+noted in the Command section.
+
+.SH Options
+.TP
+\fB\-\-help, \-h \fP
+Shows supported \fBhsmpctl\fP commands and usage.
+
+.TP
+\fB\-\-cpu <cpu>, \-c <cpu>\fP
+Show or set values for the specified <cpu>. See commands section for which
+commands require this option.
+
+.TP
+\fB\-\-socket <socket>, \-s <socket>\fP
+Show or set values for the specified <socket>, for single socket systems
+this defaults to using socket 0. See commands section for which
+commands require this option.
+
+.TP
+\fB\-\-bus <bus>, \-b <bus>\fP
+Show or set values for the specified <bus>. See commands section for which
+commands require this option.
+
+.TP
+\fB\-\-all, \-a \fP
+Show or set values for all sockets or CPUs on the system. See commands section
+for commands that require this option.
+
+.TP
+\fB\-\-list, \-l\fP
+List the valid range of CPUs and Sockets, and the valid buses available for
+use by the \fBhsmpctl\fP command.
+
+.TP
+\fB\-v\fP
+Print the hsmpctl command version.
+
+.SH Commands
+.TP
+\fBstart\fP
+\fBhsmpctl\fP start
+
+Start the hsmpctld daemon, must be run as root.
+
+.TP
+\fBexit\fP
+\fBhsmpctl\fP stop
+
+Stop the hsmpctld daemon, must be run as root.
+
+.TP
+\fBversion\fP
+\fBhsmpctl\fP version
+
+Display the current SMU firmware version and the HSMP Interface version.
+
+.TP
+\fBsocket_power\fP
+\fBhsmpctl\fP -s <socket> socket_power
+
+Display the average power consumption in mW for the specified socket.
+
+\fBhsmpctl\fP [-a | --all] socket_power
+
+Display the average power consumption in mW for all sockets.
+
+.TP
+\fBsocket_power_limit\fP
+\fBhsmpctl\fP -s <socket> socket_power_limit
+
+Display the socket power consumption limit in mW for the specified <socket>.
+
+\fBhsmpctl\fP [-a | --all] socket_power_limit
+
+Display the socket power consumption limit in mW for all sockets.
+
+\fBhsmpctl\fP -s <socket> socket_power_limit <power_limit>
+
+Set the socket power consumption limit (in mW) for the specified <socket>
+to the <power_limit> specified, must be run as root.
+
+\fBhsmpctl\fP [-a | --all] socket_power_limit <power_limit>
+
+Set the socket power consumption limit (in mW) for the all sockets
+to the <power_limit> specified, must be run as root.
+
+.TP
+\fBsocket_max_power\fP
+\fBhsmpctl\fP -s <socket> socket_max_power
+
+Display the maximum power consumption limit that can be set for the
+specified socket.
+
+\fBhsmpctl\fP [-a | --all] socket_max_power
+
+Display the maximum power consumption limit that can be set for every
+socket.
+
+.TP
+\fBcpu_boost_limit\fP
+\fBhsmpctl\fP -c <cpu> cpu_boost_limit
+
+Display the boost limit in MHz for the cpu.
+
+\fBhsmpctl\fP [-a | --all] cpu_boost_limit
+
+Display the boost limit in MHz for every cpu.
+
+\fBhsmpctl\fP -c <cpu> cpu_boost_limit <boost_limit>
+
+Set the boost limit for the specified <cpu> to the specified
+<boost_limit> in MHz, must be run as root.
+
+\fBhsmpctl\fP -s <socket> cpu_boost_limit <boost_limit>
+
+Set the boost limit for all cpus in the specified <socket> to
+the specified <boost_limit> in MHz, must be run as root.
+
+\fBhsmpctl\fP [-a | --all] cpu_boost_limit <boost_limit>
+
+Set all cpus in the system to the specified <boost_limit> in MHz,
+must be run as root.
+
+.TP
+\fBproc_hot\fP
+\fBhsmpctl\fP -s <socket> proc_hot
+
+Display the PROCHOT status for the specified <socket>.
+
+\fBhsmpctl\fP [-a | --all] proc_hot
+
+Display the PROCHOT status for all sockets.
+
+.TP
+\fBxgmi_pstate\fP
+\fBhsmpctl\fP xgmi_width auto
+
+Set the xGMI link width control to automatic link width selection, must be run as root.
+
+\fBhsmpctl\fP xgmi_width <min> <max>
+
+Set the xGMI link width control to the specified <min> and <max> link widths,
+must be run as root.
+
+xGMI link width control is only for 2P platforms. During normal
+operation, Dynamic Link Width Management (DLWM) automatically
+sets the link width based on socket-to-socket bandwidth demand.
+This automatic link width selection is between x2 and x16 on
+family 19h. The xgmi_width command allows you to modify these
+limits, including setting a fixed link width by specifying min = max.
+You can return to automatic/default operation with 'hsmpctl xgmi_width auto'.
+
+The valid xGMI link widths include the following:
+
+.RS 8
+.TP 16
+<link width>
+Description
+.TP
+auto
+Enable autonomous link width selection.
+.TP
+x2
+Set link width to 2 lanes.
+.TP
+x8
+Set link width to 8 lanes.
+.TP
+x16
+Set link width to 16 lanes.
+.RE
+
+.TP
+\fBdf_pstate\fP
+\fBhsmpctl\fP -s <socket> df_pstate <pstate>
+
+Set the data fabric P-state to the specified <pstate> for the
+specified <socket>, must be run as root.
+
+\fBhsmpctl\fP [-a | --all] df_pstate <pstate>
+
+Set the data fabric P-state to the specified <pstate> for all
+sockets, must be run as root.
+
+The valid data fabric P-states include:
+
+.RS 8
+.TP 16
+<pstate>
+Description
+.TP
+auto
+Enable automatic P-state selection based on data fabric utilization.
+.TP
+0
+Highest P-state.
+.TP
+1
+
+.TP
+2
+
+.TP
+3
+Lowest P-state.
+.RE
+
+.TP
+\fBfabric_clocks\fP
+\fBhsmpctl\fP -s <socket> fabric_clocks
+
+Display the data fabric clock (in MHz) and the memory clock (in MHz)
+for the specified <socket>.
+
+\fBhsmpctl\fP [-a | --all] fabric_clocks
+
+Display the data fabric clock (in MHz) and the memory clock (in MHz)
+for all sockets.
+
+.TP
+\fBcore_clock_max\fP
+\fBhsmpctl\fP -s <socket> core_clock_max
+
+Display the maximum core clock (in MHz) for the specified <socket>.
+
+\fBhsmpctl\fP [-a | --all] core_clock_max
+
+Display the maximum core clock (in MHz) for all sockets.
+
+.TP
+\fBc0_residency\fP
+\fBhsmpctl\fP -s <socket> c0_residency
+
+Display the C0 residency for all cpus in the specified <socket>.
+
+\fBhsmpctl\fP [-a | --all] c0_residency
+
+Display the C0 residency for all cpus in all sockets
+
+Residency is reported as an integer between 0 - 100, where 100 specifies that all enabled
+cpus in the socket are running in C0.
+
+.TP
+\fBnbio_pstate\fP
+\fBhsmpctl\fP -b <bus> nbio_pstate <pstate>
+
+Set the NBIO (PCIe interface) P-state for the specified <bus> to the
+specified <pstate>, must be run as root.
+
+\fBhsmpctl\fP [-a | --all] nbio_pstate <pstate>
+
+Set the NBIO (PCIe interface) P-state for all busses to the
+specified <pstate>, must be run as root.
+
+The valid NBIO P-states include:
+
+.RS 8
+.TP 16
+<pstate>
+Description
+.TP
+auto
+Enable automatic P-state selection based on bus utilization.
+.TP
+0
+Highest NBIO P-state
+.RE
+
+.TP
+\fBddr_bw\fP
+\fBhsmpctl\fP -s <socket> ddr_bw
+
+Display the DDR bandwidth info for the specified <socket>.
+
+\fBhsmpctl\fP [-a | --all] ddr_bw
+
+Display the DDR bandwidth info for the all sockets.
+
+Displays the theoretical maximum DDR bandwidth (in GB/s), the utilized
+DDR bandwidth (in GB/s), and the utilized DDR bandwidth as a percentage
+of the theoretical maximum.
+
+.SH AUTHORS
+Nathan Fontenot <nathan.fontenot@amd.com>
