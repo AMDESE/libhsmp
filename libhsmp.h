@@ -149,7 +149,7 @@ enum hsmp_df_pstate {
 };
 
 /* Set the data fabric P-state for the specified socket. */
-int hsmp_set_data_fabric_pstate(int sokcet, enum hsmp_df_pstate pstate);
+int hsmp_set_data_fabric_pstate(int socket_id, enum hsmp_df_pstate pstate);
 
 /*
  * Get the current data fabric clock (in MHz) and memory clock (in MHz)
@@ -218,7 +218,7 @@ int hsmp_ddr_bandwidths(int socket_id, u32 *max_bw, u32 *utilized_bw,
  *
  * Only available on systems with hsmp interface version >= 3.
  */
-int hsmp_ddr_max_bandwidth(int socket, u32 *max_bw);
+int hsmp_ddr_max_bandwidth(int socket_id, u32 *max_bw);
 
 /*
  * Get the current utilized DDR bandwidth (read + write) in GB/s for
@@ -226,7 +226,7 @@ int hsmp_ddr_max_bandwidth(int socket, u32 *max_bw);
  *
  * Only available on systems with hsmp interface version >= 3.
  */
-int hsmp_ddr_utilized_bandwidth(int socket, u32 *utilized_bw);
+int hsmp_ddr_utilized_bandwidth(int socket_id, u32 *utilized_bw);
 
 /*
  * Get the current utilized DDR bandwidth as a percentage of the
