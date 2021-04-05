@@ -385,8 +385,10 @@ retry:
 static int hsmp_send_message(int socket_id, struct hsmp_message *msg)
 {
 	struct pci_dev *root_dev;
-	unsigned int arg_num = 0;
 	int err;
+#ifdef DEBUG_HSMP
+	unsigned int arg_num = 0;
+#endif
 
 	root_dev = socket_id_to_dev(socket_id);
 	if (!root_dev) {
