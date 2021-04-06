@@ -111,26 +111,29 @@ int hsmp_cpu_boost_limit(int cpu, u32 *boost_limit);
 int hsmp_proc_hot_status(int socket_id, int *status);
 
 /*
- * Note on xGMI P-state.
+ * Note on xGMI link width.
  *
- * xGMI P-state only exists on 2P platfroms.
- *
- * Specifying a hsmp_xgmi_pstate will set the link P-state.
- * HSMP_XGMI_PSTATE_DYNAMIC - Enable autonomous link width selection.
- * HSMP_XGMI_PSTATE_X2 -      Set link width to 2 lanes.
- * HSMP_XGMI_PSTATE_X8 -      Set link width to 8 lanes.
- * HSMP_XGMI_PSTATE_X16 -     Set link width to 16 lanes, only valid on
- *			      family 19h systems.
+ * xGMI link width control is only for 2P platfroms. During normal
+ * operation, Dynamic Link Width Management (DLWM) automatically
+ * sets the link width based on socket-to-socket bandwidth demand.
+ * This automatic link width selection is between x2 and x16 on
+ * family 19h and between x8 and x16 on family 17h. The set link
+ * width API allows you to modify these limits, including setting
+ * a fixed link width by specifying min = max. You can return to
+ * automatic/default operation with the set link width auto API.
  */
-enum hsmp_xgmi_pstate {
-	HSMP_XGMI_PSTATE_DYNAMIC,
-	HSMP_XGMI_PSTATE_X2,
-	HSMP_XGMI_PSTATE_X8,
-	HSMP_XGMI_PSTATE_X16,
+enum hsmp_xgmi_width {
+	HSMP_XGMI_WIDTH_X2,
+	HSMP_XGMI_WIDTH_X8,
+	HSMP_XGMI_WIDTH_X16,
 };
 
-/* Set the xGMI P-state */
-int hsmp_set_xgmi_pstate(enum hsmp_xgmi_pstate pstate);
+/* Set xGMI dynamic link width minimum and maximum */
+int hsmp_set_xgmi_width(enum hsmp_xgmi_width min_width,
+			enum hsmp_xgmi_width max_width);
+
+/* Enable automatic xGMI link width selection */
+int hsmp_set_xgmi_auto(void);
 
 /*
  * The data fabric P-state selection can be in the range of

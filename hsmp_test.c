@@ -407,38 +407,41 @@ void test_hsmp_boost_limit(void)
 
 void test_hsmp_xgmi(void)
 {
-	enum hsmp_xgmi_pstate xgmi_pstate;
+	enum hsmp_xgmi_width xgmi_width;
 	int rc;
 
-	printf("Testing hsmp_set_xgmi_pstate()...\n");
+	printf("Testing hsmp_set_xgmi_width()...\n");
 
-	pr_test_start("Testing xgmi pstate invalid value 5 ");
-	rc = hsmp_set_xgmi_pstate(5);
+	pr_test_start("Testing hsmp_set_xgmi_auto() ");
+	rc = hsmp_set_xgmi_auto();
+	eval_for_pass(rc);
+
+	pr_test_start("Testing xgmi width invalid value 5 ");
+	rc = hsmp_set_xgmi_width(1, 5);
 	eval_for_failure(rc);
 
-	xgmi_pstate = HSMP_XGMI_PSTATE_DYNAMIC;
-	pr_test_start("Testing HSMP_XGMI_PSTATE_DYNAMIC (%d) ", xgmi_pstate);
-	rc = hsmp_set_xgmi_pstate(xgmi_pstate);
+	pr_test_start("Testing xgmi width min > max ");
+	rc = hsmp_set_xgmi_width(HSMP_XGMI_WIDTH_X16, HSMP_XGMI_WIDTH_X8);
+	eval_for_failure(rc);
+
+	xgmi_width = HSMP_XGMI_WIDTH_X16;
+	pr_test_start("Testing HSMP_XGMI_WIDTH_X16 (%d) ", xgmi_width);
+	rc = hsmp_set_xgmi_width(xgmi_width, xgmi_width);
 	eval_for_pass(rc);
 
-	xgmi_pstate = HSMP_XGMI_PSTATE_X2;
-	pr_test_start("Testing HSMP_XGMI_PSTATE_X2 (%d) ", xgmi_pstate);
-	rc = hsmp_set_xgmi_pstate(xgmi_pstate);
+	xgmi_width = HSMP_XGMI_WIDTH_X8;
+	pr_test_start("Testing HSMP_XGMI_WIDTH_X8 (%d) ", xgmi_width);
+	rc = hsmp_set_xgmi_width(xgmi_width, xgmi_width);
 	eval_for_pass(rc);
 
-	xgmi_pstate = HSMP_XGMI_PSTATE_X8;
-	pr_test_start("Testing HSMP_XGMI_PSTATE_X8 (%d) ", xgmi_pstate);
-	rc = hsmp_set_xgmi_pstate(xgmi_pstate);
-	eval_for_pass(rc);
-
-	/* HSMP_XGMI_PSTATE_X16 only valid on Family 19h systems */
+	/* HSMP_XGMI_WIDTH_X2 only valid on Family 19h systems */
 	if (cpu_family < 0x19)
 		unsupported_interface = 1;
 
-	xgmi_pstate = HSMP_XGMI_PSTATE_X16;
-	pr_test_start("Testing %sHSMP_XGMI_PSTATE_X16 (%d) ",
-		      unsupported_interface ? "unsupported " : "", xgmi_pstate);
-	rc = hsmp_set_xgmi_pstate(xgmi_pstate);
+	xgmi_width = HSMP_XGMI_WIDTH_X2;
+	pr_test_start("Testing %sHSMP_XGMI_WIDTH_X2 (%d) ",
+		      unsupported_interface ? "unsupported " : "", xgmi_width);
+	rc = hsmp_set_xgmi_width(xgmi_width, xgmi_width);
 	if (unsupported_interface)
 		eval_for_failure(rc);
 	else

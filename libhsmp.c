@@ -1160,7 +1160,8 @@ int hsmp_proc_hot_status(int socket_id, int *status)
 	return 0;
 }
 
-int hsmp_set_xgmi_pstate(enum hsmp_xgmi_pstate pstate)
+int hsmp_set_xgmi_width(enum hsmp_xgmi_width min_width,
+			enum hsmp_xgmi_width max_width)
 {
 	struct hsmp_message msg = { 0 };
 	int socket_id;
@@ -1171,36 +1172,19 @@ int hsmp_set_xgmi_pstate(enum hsmp_xgmi_pstate pstate)
 	if (err)
 		return -1;
 
-	switch (pstate) {
-	case HSMP_XGMI_PSTATE_DYNAMIC:
-		if (hsmp_data.x86_family == 0x19)
-			min = 0;
-		else
-			min = 1;
+	if (hsmp_data.x86_family >= 0x19)
+		min = HSMP_XGMI_WIDTH_X2;
+	else
+		min = HSMP_XGMI_WIDTH_X8;
 
-		max = 2;
-		break;
-	case HSMP_XGMI_PSTATE_X2:
-		min = 2;
-		max = 2;
-		break;
-	case HSMP_XGMI_PSTATE_X8:
-		min = 1;
-		max = 1;
-		break;
-	case HSMP_XGMI_PSTATE_X16:
-		if (hsmp_data.x86_family == 0x19) {
-			min = max = 0;
-		} else {
-			errno = EINVAL;
-			return -1;
-		}
-
-		break;
-	default:
+	if (min_width < min || min_width > HSMP_XGMI_WIDTH_X16 ||
+	    max_width < min_width || max_width > HSMP_XGMI_WIDTH_X16) {
 		errno = EINVAL;
 		return -1;
 	}
+
+	min = min_width;
+	max = max_width;
 
 	msg.msg_num = HSMP_SET_XGMI_LINK_WIDTH;
 	msg.num_args = 1;
@@ -1216,6 +1200,18 @@ int hsmp_set_xgmi_pstate(enum hsmp_xgmi_pstate pstate)
 	}
 
 	return err;
+}
+
+int hsmp_set_xgmi_auto(void)
+{
+	enum hsmp_xgmi_width min;
+
+	if (hsmp_data.x86_family >= 0x19)
+		min = HSMP_XGMI_WIDTH_X2;
+	else
+		min = HSMP_XGMI_WIDTH_X8;
+
+	return hsmp_set_xgmi_width(min, HSMP_XGMI_WIDTH_X16);
 }
 
 int hsmp_set_data_fabric_pstate(int socket_id, enum hsmp_df_pstate pstate)
