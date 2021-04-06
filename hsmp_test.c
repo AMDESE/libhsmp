@@ -110,6 +110,8 @@ void pr_fail(int rc)
 #define einval_error(_r, _e)	((_r) == -1 && (_e) == EINVAL)
 #define eperm_error(_r, _e)	(!privileged_user && (_r) == -1 && (_e) == EPERM)
 #define enotsup_error(_r, _e)	(privileged_user && (_r) == -1 && (_e) == ENOTSUP)
+#define enomsg_error(_r, _e)	(privileged_user && unsupported_interface && \
+				 (_r) == -1 && (_e) == ENOMSG)
 
 /*
  * The following routines for evaluating return codes from a test
@@ -146,6 +148,10 @@ void eval_for_failure(int rc)
 			pr_pass();
 			pr_test_note("received expected EINVAL return code\n");
 			return;
+		} else if (enomsg_error(rc, errno)) {
+			pr_pass();
+			pr_test_note("received expected ENOMSG return code\n");
+			return;
 		}
 	} else if (eperm_error(rc, errno)) {
 		pr_pass();
@@ -171,6 +177,10 @@ void eval_for_pass_results(int rc, int expected, int result)
 		    (hsmp_disabled || unsupported_interface || cpu_family < 0x19)) {
 			pr_pass();
 			pr_test_note("received expected ENOTSUP return code\n");
+			return;
+		} else if (enomsg_error(rc, errno)) {
+			pr_pass();
+			pr_test_note("received expected ENOMSG return code\n");
 			return;
 		}
 	} else if (eperm_error(rc, errno)) {

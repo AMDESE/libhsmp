@@ -38,8 +38,32 @@ HSMP defined error and a return value of -1 indicates a Linux error
 where errno will be set.
 
 To ease the determination of errors, a hsmp_strerror() interface is
-provided that will return a proper error string for all return values
+provided that will return a proper error string for HSMP defined
+errors and the standard Linux error string for all other return values
 from libhsmp.
+
+The following errno values are set by libhsmp.
+
+o EPERM     - set for any non-privileged caller of libhsmp.
+
+o ENOTSUP   - set if HSMP is disabled in BIOS or the CPU model/family
+              is not supported.
+
+o ENODEV    - set when PCI bus enumeration in libhsmp initialization fails.
+
+o ENOMSG    - set when the provided HSMP message id is not supported by
+              the HSMP interface version.
+
+o EBADMSG   - set when the provided HSMP message id is supported by the
+              HSMP interface version but not by the SMU firmware version.
+
+o EAGAIN    - set when a failure occurs during libhsmp initialization where
+              a future call to libhsmp may succeed.
+
+o EINVAL    - set for any invalid parameter passed to libhsmp.
+
+o ETIMEDOUT - set when communication with the HSMP mailboxes timnes out.
+
 
 4. Build
 ========

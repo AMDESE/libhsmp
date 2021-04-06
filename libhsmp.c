@@ -330,22 +330,11 @@ retry:
 		return err;
 	}
 
-	/*
-	 * SMU has not responded to the message yet.
-	 *
-	 * If we time out waiting for SMU to respond indicates HSMP is not
-	 * enabled in BIOS. Unfortunately there is no error return if HSMP
-	 * is disabled, SMU simply does not respond.
-	 *
-	 * Mark HSMP as disabled, this results in any future calls returning
-	 * ENOTSUP. There is no way to enable HSMP without rebooting.
-	 */
+	/* SMU has not responded to the message yet. */
 	if (mbox_status == HSMP_STATUS_NOT_READY) {
 		if (--timeout == 0) {
-			pr_debug("SMU timeout for message ID %u, HSMP is not enabled\n",
-				 msg->msg_num);
-			hsmp_data.hsmp_disabled = 1;
-			errno = ENOTSUP;
+			pr_debug("SMU timeout for message ID %u\n", msg->msg_num);
+			errno = ETIMEDOUT;
 			return -1;
 		}
 
@@ -357,11 +346,11 @@ retry:
 	 * by the HSMP interface version specified. For these instances
 	 * a status code of HSMP_ERR_INVALID_MSG_ID is returned. If we
 	 * see this status and the msg_id is considered supported by the
-	 * interface version we should return ENOTSUP.
+	 * interface version we return EBADMSG.
 	 */
 	if (mbox_status == HSMP_ERR_INVALID_MSG_ID &&
 	    msg_id_supported(msg->msg_num)) {
-		errno = ENOTSUP;
+		errno = EBADMSG;
 		return -1;
 	}
 
@@ -468,12 +457,12 @@ static int cpu_socket_id(int cpu)
 }
 
 /*
- * Check if this CPU supports HSMP (based on vendor, family, and model). If so,
- * attempt a test message and if successful, retrieve the protocol version
- * and SMU firmware version. Check if the protocol version is supported.
- * Returns 0 for success
- * Returns -ENODEV for unsupported protocol version, unsupported CPU,
- * or if probe or test message fails.
+ * Probe HSMP mailboxes to verify HSMP is enabled, if successful retrieve
+ * the SMU fw version and HSMP interface version.
+ *
+ * Returns -1 with errno set to ENOTSUP if the test message fails, or
+ * errno set to EAGAIN if retrieving the SMU fw version or interface
+ * version fails.
  */
 static int hsmp_probe(void)
 {
@@ -497,9 +486,17 @@ static int hsmp_probe(void)
 		msg.args[0] = 1;
 		msg.response_sz = 1;
 
+		/*
+		 * Send a test message to verify HSMP enablement. If this call
+		 * fails the issue is due to HSMP not being enabled in BIOS.
+		 *
+		 * Set the disabled flag to short-circuit future library calls
+		 * from going through library initialization.
+		 */
 		err = hsmp_send_message(socket_id, &msg);
 		if (err) {
 			pr_debug("HSMP Test failed for socket %d\n", socket_id);
+			hsmp_data.hsmp_disabled = 1;
 			errno = ENOTSUP;
 			return -1;
 		}
@@ -507,6 +504,7 @@ static int hsmp_probe(void)
 		if (msg.response[0] != msg.args[0] + 1) {
 			pr_debug("HSMP test failed for socket %d, expected %x, received %x\n",
 				 socket_id, msg.args[0] + 1, msg.response[0]);
+			hsmp_data.hsmp_disabled = 1;
 			errno = ENOTSUP;
 			return -1;
 		}
@@ -521,7 +519,7 @@ static int hsmp_probe(void)
 			err = hsmp_send_message(socket_id, &msg);
 			if (err) {
 				pr_debug("Could not retrieve SMU FW Version\n");
-				errno = ENOTSUP;
+				errno = EAGAIN;
 				return -1;
 			}
 
@@ -541,7 +539,7 @@ static int hsmp_probe(void)
 			err = hsmp_send_message(socket_id, &msg);
 			if (err) {
 				pr_debug("Could not retrieve HSMP Interface Version\n");
-				errno = ENOTSUP;
+				errno = EAGAIN;
 				return -1;
 			}
 
@@ -601,6 +599,7 @@ static int get_system_info(void)
 
 	pr_debug("libhsmp not supported on %s CPU family %xh model %xh\n",
 		 vendstr[id], family, model);
+	hsmp_data.hsmp_disabled = 1;
 	errno = ENOTSUP;
 	return -1;
 }
@@ -740,7 +739,7 @@ static int hsmp_setup_nbios(void)
 
 nbio_setup_error:
 	hsmp_cleanup_nbios();
-	errno = ENOTSUP;
+	errno = ENODEV;
 	return -1;
 }
 
@@ -879,7 +878,7 @@ static int hsmp_enter(enum hsmp_msg_t msg_id)
 	}
 
 	if (!msg_id_supported(msg_id)) {
-		errno = ENOTSUP;
+		errno = ENOMSG;
 		return -1;
 	}
 
