@@ -1229,7 +1229,7 @@ int hsmp_set_data_fabric_pstate(int socket_id, enum hsmp_df_pstate pstate)
 	if (err)
 		return err;
 
-	if (pstate < HSMP_DF_PSTATE_AUTO || pstate > HSMP_DF_PSTATE_3) {
+	if (pstate < HSMP_DF_PSTATE_0 || pstate > HSMP_DF_PSTATE_AUTO) {
 		errno = EINVAL;
 		return -1;
 	}
@@ -1239,7 +1239,7 @@ int hsmp_set_data_fabric_pstate(int socket_id, enum hsmp_df_pstate pstate)
 	} else {
 		msg.msg_num = HSMP_SET_DF_PSTATE;
 		msg.num_args = 1;
-		msg.args[0] = pstate - 1; /* HW P-states numbered 0 - 3 */
+		msg.args[0] = pstate;
 	}
 
 	return hsmp_send_message(socket_id, &msg);

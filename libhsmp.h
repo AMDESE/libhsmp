@@ -144,11 +144,11 @@ int hsmp_set_xgmi_auto(void);
  * selection based on data fabric utilization.
  */
 enum hsmp_df_pstate {
-	HSMP_DF_PSTATE_AUTO,
 	HSMP_DF_PSTATE_0,
 	HSMP_DF_PSTATE_1,
 	HSMP_DF_PSTATE_2,
 	HSMP_DF_PSTATE_3,
+	HSMP_DF_PSTATE_AUTO,
 };
 
 /* Set the data fabric P-state for the specified socket. */
