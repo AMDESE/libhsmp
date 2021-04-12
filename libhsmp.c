@@ -1378,23 +1378,34 @@ int hsmp_set_nbio_pstate(u8 bus_num, enum hsmp_nbio_pstate pstate)
 
 int hsmp_next_bus(int idx, u8 *bus_num)
 {
-	int err;
+	int err, rv;
 
+	/* Perform library initialization and HSMP test message */
 	err = hsmp_enter(0);
 	if (err)
-		return -1;
+		return err;
 
-	if (!bus_num)
+	if (!bus_num || idx < 0 || idx >= MAX_NBIOS) {
+		errno = EINVAL;
 		return -1;
+	}
 
-	if (idx < 0 || idx >= MAX_NBIOS)
+	if (!hsmp_data.nbios[idx].dev) {  /* No IOHC at this array index */
+		errno = ENODEV;
 		return -1;
-
-	if (!hsmp_data.nbios[idx].dev)
-		return -1;
+	}
 
 	*bus_num = hsmp_data.nbios[idx].bus_base;
-	return idx + 1;
+
+	/*
+	 * Test if the next iteration would succeed. Return idx if so,
+	 * return 0 if not.
+	 */
+	rv = idx + 1;
+	if (rv == MAX_NBIOS || !hsmp_data.nbios[rv].dev)
+		rv = 0;
+
+	return rv;
 }
 
 int hsmp_ddr_bandwidths(int socket_id, u32 *max_bw,

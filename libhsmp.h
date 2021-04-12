@@ -199,12 +199,23 @@ int hsmp_set_nbio_pstate(u8 bus_num, enum hsmp_nbio_pstate pstate);
 
 /*
  * Helper function to iterate over enumerated PCIe controller complexes in
- * the system. Begin a new search by setting idx = 0. The return value from
- * the function will be greater than zero and bus_num will be set if the
- * first/next bus is located. The return value should be assigned to idx for
- * the next iteration. Note this enumeration may not include every possible
- * bus in the system. It will only include the busses corresponding to the
- * base bus for a PCIe controller complex.
+ * the system. Begin a new search by setting idx = 0. If the return value
+ * is -1, errno will indicate the reason, which can be any of the reasons
+ * library initialization may fail (e.g. not running as root or HSMP support
+ * is disabled in firmware, etc.), or an invalid parameter was supplied.
+ *
+ * Otherwise, the return value for the first call will be greater than zero
+ * (usually 1 after the first call with idx=0) and bus_num will be set to
+ * the lowest base bus in the system (usually 0x00 after the first call with
+ * idx=0). The return value should be assigned to idx for each subsequent
+ * iteration.
+ *
+ * When the API call succeeds in returning the last bus in the system, the
+ * end of the bus list has been reached, the return value will be zero.
+ *
+ * Note this enumeration may not include every possible bus in the system.
+ * It will only include the busses corresponding to the base bus for a PCIe
+ * controller complex.
  */
 int hsmp_next_bus(int idx, u8 *bus_num);
 
