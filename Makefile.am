@@ -25,7 +25,7 @@ endif
 lib_LTLIBRARIES = libhsmp.la
 libhsmp_la_SOURCES = libhsmp.c
 
-libhsmp_la_LDFLAGS = -version-info 1:0:0
+libhsmp_la_LDFLAGS = -version-info 1:1:0
 
 noinst_SCRIPTS = run_tests.sh
 EXTRA_DIST += run_tests.sh
