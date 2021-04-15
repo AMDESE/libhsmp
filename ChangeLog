@@ -1,0 +1,492 @@
+commit 27f6130170d7b3add6da050d2a8accdce24078f0
+Author: Nathan Fontenot <nathan.fontenot@amd.com>
+Date:   Thu Apr 15 08:50:20 2021 -0500
+
+    Add changes to ChangeLog for v1.0.1
+    
+    Signed-off-by: Nathan Fontenot <nathan.fontenot@amd.com>
+
+commit e18ad0d1a6d4e2db2cca4800e5b82124db7580e3
+Author: Nathan Fontenot <nathan.fontenot@amd.com>
+Date:   Wed Apr 14 14:28:06 2021 -0500
+
+    libhsmp: update version for next release
+    
+    Signed-off-by: Nathan Fontenot <nathan.fontenot@amd.com>
+
+commit cf17626b327a036686e1761d868e4a16c51d0668
+Author: Nathan Fontenot <nathan.fontenot@amd.com>
+Date:   Wed Apr 14 14:19:50 2021 -0500
+
+    libhsmp: Add bug report email address
+    
+    Add a proper bug report email address to configure.ac
+    
+    Signed-off-by: Nathan Fontenot <nathan.fontenot@amd.com>
+
+commit 2d43b90b8109ad0d771f503df4ff51d829eefdba
+Author: Nathan Fontenot <nathan.fontenot@amd.com>
+Date:   Fri Apr 2 09:56:06 2021 -0500
+
+    examples: Add hsmpctl commnd
+    
+    The hsmpctl command provides a command line interface to the
+    HSMP mailboxes exposed in libhsmp. The hsmpctl commad works by
+    communicating with libhsmp through the hsmpctld daemon. This
+    allows for some abstraction on the commands in hsmpctl and
+    allows for non-privileged users to view read-only attributes
+    from libhsmp.
+    
+    Signed-off-by: Nathan Fontenot <nathan.fontenot@amd.com>
+
+commit 14c48e576ba7bb01afe25de7f280da9e30cbfa12
+Author: Lewis Carroll <lewis.carroll@amd.com>
+Date:   Mon Apr 12 10:58:53 2021 -0500
+
+    examples: Initial commit of NBIO example app
+    
+    This simple example application uses the HSMP message to set PCI-e root
+    complex logic (NBIO) to the highest power state. The use case for this
+    is for servers with multiple GPUs or Infiniband NICs, where the latency
+    and/or bandwidth for small messages is critical.
+    
+    Signed-off-by: Lewis Carroll <lewis.carroll@amd.com>
+    Signed-off-by: Nathan Fontenot <nathan.fontenot@amd.com>
+
+commit cf0818abe79eb7bfd18337451b91a1ef2e45a264
+Author: Lewis Carroll <lewis.carroll@amd.com>
+Date:   Mon Apr 12 10:54:24 2021 -0500
+
+    libhsmp: Improve error handling in hsmp_next_bus
+    
+    Initial commit of this API made it difficult to distinguish errors vs.
+    reaching the end of iterations. This commit improves error handling here
+    by:
+    
+    * Returning any error code returned from library initialization (though
+      currently only -1 is returned so no actual change, but better code)
+    
+    * Setting errno = EINVAL if invalid parameters are passed when calling
+      (consistent with other library API error handling)
+    
+    * Setting errno = ENODEV if a valid value is passed for idx but there
+      is no IOHC entry at that index (e.g. 1P system and idx=4 is passed)
+    
+    * Returning 0 when returning the last bus in the system
+    
+    Thus, proper use is:
+    
+        do {
+            idx = hsmp_next_bus(idx, &bus_num);
+            if (idx < 0) break and evaluate errno
+            do useful work, break out if error
+        } while (idx > 0);
+        Evaluate potential errors if idx != 0
+    
+    Since any working platform must have at least four IOHC devices, there
+    should never be a case where the platform and HSMP is working but the
+    first call to this API fails with ENODEV, provided the iteration starts
+    with idx = 0.
+    
+    Signed-off-by: Lewis Carroll <lewis.carroll@amd.com>
+    Signed-off-by: Nathan Fontenot <nathan.fontenot@amd.com>
+
+commit 84719170fe18f2f561efbb6831fa173632db9f23
+Author: Nathan Fontenot <nathan.fontenot@amd.com>
+Date:   Tue Apr 6 15:43:56 2021 -0500
+
+    Update errno return values
+    
+    To clarify the different failures in libhsmp this updates the
+    errno values the libhsmp library sets and ensures they are
+    consistently applied.
+    
+    EPERM - set for any non-root caller to libhsmp.
+    
+    ENOTSUP - set if HSMP is disabled in BIOS or the CPU mopdel/family
+    is not supported.
+    
+    ENODEV - set when initialization of PCI bus enumeration in
+    libhsmp fails.
+    
+    ENOMSG - set if the HSMP message id is not supported by the current
+    hsmp interface version.
+    
+    EBADMSG - set if the HSMP message id is supported by the current
+    HSMP interface version but not supported by the SMU fw.
+    
+    EAGAIN - set if a failure occurs during libhsmp initialization
+    where a future call to libhsmp may succeed.
+    
+    EINVAL - set for any invalid parameter passed to libhsmp.
+    
+    ETIMEDOUT - set when a call to the HSMP mailboxes times out
+    
+    Suggested-by: Lewis Carroll <lewis.carroll@amd.com>
+    Signed-off-by: Nathan Fontenot <nathan.fontenot@amd.com>
+
+commit 67094c934b263059fc0363e9bad8b0e44b5e8284
+Author: Lewis Carroll <lewis.carroll@amd.com>
+Date:   Tue Apr 6 11:16:15 2021 -0500
+
+    Reorder DF P-state enum for code clarity
+    
+    Starting enum hsmp_df_pstate with the value for auto means that the
+    values 1-4 result for P-states 0-3. The code has to subtract one before
+    passing this value to the hardware.
+    
+    By moving the auto value to the end of the enum, the enum values are
+    aligned with the hardware values making the code a bit cleaner.
+    
+    Signed-off-by: Lewis Carroll <lewis.carroll@amd.com>
+    Signed-off-by: Nathan Fontenot <nathan.fontenot@amd.com>
+
+commit b8e5d8c3ea82d30edccef041294960c5e7a20857
+Author: Lewis Carroll <lewis.carroll@amd.com>
+Date:   Tue Apr 6 10:55:26 2021 -0500
+
+    Replace xgmi_pstate API with xgmi_width
+    
+    The initial implementation of xgmi_set_pstate was somewhat constraining
+    for potential future implementations. Since the underlying HSMP message
+    uses a min and max value, change the API to also use min and max values.
+    Add an API for setting the default (automatic) mode of operation. Update
+    hsmp_test.c for these changes.
+    
+    Signed-off-by: Lewis Carroll <lewis.carroll@amd.com>
+    Signed-off-by: Nathan Fontenot <nathan.fontenot@amd.com>
+
+commit c194ab078c77886f3670200ee478fdf2a66f8eea
+Author: Lewis Carroll <lewis.carroll@amd.com>
+Date:   Mon Apr 5 11:32:37 2021 -0500
+
+    Consistently use socket_id in prototypes
+    
+    Signed-off-by: Lewis Carroll <lewis.carroll@amd.com>
+    Signed-off-by: Nathan Fontenot <nathan.fontenot@amd.com>
+
+commit fdf9cf28b97518e25999ee4a3343f9a567a6e8f4
+Author: Lewis Carroll <lewis.carroll@amd.com>
+Date:   Mon Apr 5 11:29:08 2021 -0500
+
+    Fix unused variable warning in libhsmp.c
+    
+    Fix the following compile warning when DEBUG_HSMP is not defined:
+    
+    libhsmp.c: In function 'hsmp_send_message':
+    libhsmp.c:390:15: warning: unused variable 'arg_num' [-Wunused-variable]
+      390 |  unsigned int arg_num = 0;
+          |               ^~~~~~~
+    
+    Signed-off-by: Lewis Carroll <lewis.carroll@amd.com>
+    Signed-off-by: Nathan Fontenot <nathan.fontenot@amd.com>
+
+commit b5cc1e7814e018a83ac48de49801bbd4e5fcf0e2
+Author: Nathan Fontenot <nathan.fontenot@amd.com>
+Date:   Thu Apr 1 15:42:27 2021 -0500
+
+    Cleanup test output when libhsmp debug enabled
+    
+    With libhsmp debug enabled the output from hsmp_test can be interspersed
+    with output from libhsmp. To avoid this write the test start output and
+    the test status output to a buffer and print it all out when the test
+    comnpletes.
+    
+    Signed-off-by: Nathan Fontenot <nathan.fontenot@amd.com>
+
+commit 090a10d5318f573956d51bd1b3b7a29fa6f51f4d
+Author: Nathan Fontenot <nathan.fontenot@amd.com>
+Date:   Thu Apr 1 14:49:58 2021 -0500
+
+    Add API for reading all DDR values
+    
+    Add API to libhsmp to retrieve all the DDR values.
+    
+    Suggested-by: Lewis Carroll <lewis.carroll@amd.com>
+    Signed-off-by: Nathan Fontenot <nathan.fontenot@amd.com>
+
+commit 92d468042f0bc6b22d5cc14c06ab31934632fe18
+Author: Nathan Fontenot <nathan.fontenot@amd.com>
+Date:   Thu Apr 1 14:36:48 2021 -0500
+
+    Add API to retrieve all fabric clocks
+    
+    Add an additional API to allow users to gather the data fabric
+    clock and memory clock in a single call.
+    
+    Suggested-by: Lewis Carroll <lewis.carroll@amd.com>
+    Signed-off-by: Nathan Fontenot <nathan.fontenot@amd.com>
+
+commit 35b4d6df510918342012a7845cbe8d02e6470a77
+Author: Nathan Fontenot <nathan.fontenot@amd.com>
+Date:   Thu Apr 1 14:27:32 2021 -0500
+
+    Add pci debug build test
+    
+    With the added configure option to enable addition debug pci output
+    the test script should at least do a build with this enabled. There
+    is no need to re-run the tests.
+    
+    Signed-off-by: Nathan Fontenot <nathan.fontenot@amd.com>
+
+commit 6b0693b02b1c7cf8ed5bf48d9413343e5062ebdc
+Author: Nathan Fontenot <nathan.fontenot@amd.com>
+Date:   Thu Apr 1 10:54:54 2021 -0500
+
+    Remove unused default_socket_id
+    
+    Remove the no longer used default_socket_id.
+    
+    Signed-off-by: Nathan Fontenot <nathan.fontenot@amd.com>
+
+commit 0331878f65afd0b82eee95f8827e4ee08965e5d1
+Author: Nathan Fontenot <nathan.fontenot@amd.com>
+Date:   Thu Apr 1 10:47:35 2021 -0500
+
+    Add socket to hsmp_data_fabric_pstate()
+    
+    The initial implementation mistakenly did not provide a parameter to
+    specify the socket id when setting the data fabric pstate. The HSMP
+    interface only allows to set thios on a per-socket basis, this
+    update adds a socket_id parameter to the call.
+    
+    This also adds a hsmnp test case for invalid socket is.
+    
+    Suggested-by: Lewis Carroll <lewis.carroll@amd.com>
+    Signed-off-by: Nathan Fontenot <nathan.fontenot@amd.com>
+
+commit dbb4512ec7cea855609d0336aef84e821b627f7a
+Author: Nathan Fontenot <nathan.fontenot@amd.com>
+Date:   Thu Apr 1 10:27:37 2021 -0500
+
+    Correct DDR APIs to add socket_id
+    
+    The initial PPR stated that the reported DDR bandwidth values were
+    reported for the system. This has been corrected as they are reported
+    on a per socket basis.
+    
+    To support this the DDR APIs have a socket_id value added instead of
+    defaulting to socket 0 inside of the library.
+    
+    This also adds a test case in the hsmp test suite for invalid socket
+    ids.
+    
+    Suggested-by: Lewis Carroll <lewis.carroll@amd.com>
+    Signed-off-by: Nathan Fontenot <nathan.fontenot@amd.com>
+
+commit 30c0cc1aed6e1f514829aed6084bbae2290865d6
+Author: Nathan Fontenot <nathan.fontenot@amd.com>
+Date:   Thu Apr 1 10:15:03 2021 -0500
+
+    Add socket id parameter to fabric clock APIs
+    
+    The initial implementation of the fabric clock APIs, hsmp_memory_clock()
+    and hsmp_data_fabric_clock(), did not include a socket is parameter.
+    This is incorrect as the values reported are a per socket value and not
+    a system value. This updates the clock PIs to include a socket id
+    parameter instead of defaulting to socket 0.
+    
+    This update also adds a test case for an incorrect socket id to the
+    hsmp test suite.
+    
+    Suggested-by: Lewis Carroll <lewis_carroll@amd.com>
+    Signed-off-by: Nathan Fontenot <nathan.fontenot@amd.com>
+
+commit cd54b1487951195ec7554909329fddcb36730f2e
+Author: Nathan Fontenot <nathan.fontenot@amd.com>
+Date:   Thu Apr 1 10:00:28 2021 -0500
+
+    Correct memory clock API naming
+    
+    The initial implementation named this API hsmp_memory_fabric_clock().
+    The memory clock is not a fabric clock and should not have been named
+    as such.
+    
+    Update libhsmp to have a hsmp_memory_clock() API as the official
+    interface.
+    
+    Suggested-by: Lewis Carroll <lewis.carroll@amd.com>
+    Signed-off-by: Nathan Fontenot <nathan.fontenot@amd.com>
+
+commit c8646aa089007f91495f2671377f6a0375fe7b41
+Author: Nathan Fontenot <nathan.fontenot@amd.com>
+Date:   Thu Mar 25 23:14:12 2021 -0500
+
+    Recognize when HSMP is not enabled
+    
+    BIOS on systems provides a method to disable the HSMP mailboxes.
+    Doing this will result in HAMP requests to time out. As of now
+    this is the only indicator we have that HSMP is disabled.
+    
+    Update libhsmp to recognize when a timeout occurs for a HSMP call
+    and set a flag to indicate that HSMP is disabled. This allows
+    the library to short circuit any future calls so it does go
+    through the set up process and simply returns ENOTSUP.
+    
+    Additionally, to properly handle this major updates had to be
+    made to the hsmp_test test program.
+    
+    Signed-off-by: Nathan Fontenot <nathan.fontenot@amd.com>
+
+commit b3d30a836e37beff8c1b4a360d4789411d1b3d2c
+Author: Lewis Carroll <lewis.carroll@amd.com>
+Date:   Fri Mar 26 14:57:59 2021 -0500
+
+    Add helper function to iterate PCI busses
+    
+    Users of the libhsmp hsmp_set_nbio_pstate function may need a way to
+    iterate over all of the NBIO tiles in the system (by PCI bus number).
+    Expose a helper function to enable this iteration.
+    
+    Signed-off-by: Lewis Carroll <lewis.carroll@amd.com>
+    Signed-off-by: Nathan Fontenot <nathan.fontenot@amd.com>
+
+commit decf9f09e43bad09d55b8484f7d3f57d3cd9535e
+Author: Lewis Carroll <lewis.carroll@amd.com>
+Date:   Fri Mar 26 10:49:00 2021 -0500
+
+    Fix bug in hsmp_set_data_fabric_pstate
+    
+    The enum for fabric P-state is 0-4 in the header file, with value 0
+    being the value to enable auto fabric P-state selection. This leaves
+    values 1 - 4 for fixed fabric P-state selection. However, in hardware
+    the P-states are numbered 0 - 3. Therefore, when setting fixed fabric
+    P-state we need to subtract 1 to account for the use of P-state 0 as the
+    value for auto P-state selection.
+    
+    Signed-off-by: Lewis Carroll <lewis.carroll@amd.com>
+    Signed-off-by: Nathan Fontenot <nathan.fontenot@amd.com>
+
+commit 6af3856c11ff25fe9f375f11bc867dab5da16136
+Author: Lewis Carroll <lewis.carroll@amd.com>
+Date:   Fri Mar 26 09:51:19 2021 -0500
+
+    Set NBIO P-state fn should use bus number
+    
+    The hsmp_set_nbio_pstate function should use the PCI bus number instead
+    of socket ID since there are four NBIO tiles per socket. Since the
+    end-user or software "sees" the PCI system as bus numbers, not as NBIO
+    tiles or root complex IDs, take the bus number and translate it to the
+    corresponding socket ID and NBIO tile ID to send the appropriate HSMP
+    message.
+    
+    Update hsmp_test.c based on this change by removing the test for an
+    invalid bus number. Now that the bus number is specified as an u8
+    we don't have a invalid value that works. This should be re-added
+    if we can find a way to specify an invalid bus number.
+    
+    Signed-off-by: Lewis Carroll <lewis.carroll@amd.com>
+    Signed-off-by: Nathan Fontenot <nathan.fontenot@amd.com>
+
+commit 7926f318db923b841199dcf49cf94915af747cf2
+Author: Lewis Carroll <lewis.carroll@amd.com>
+Date:   Thu Mar 25 23:40:57 2021 -0500
+
+    Add socket ID to sending message debug
+    
+    Move the code to generate the debug output when sending a message so
+    that the target socket ID can be included in the debug message.
+    
+    Signed-off-by: Lewis Carroll <lewis.carroll@amd.com>
+    Signed-off-by: Nathan Fontenot <nathan.fontenot@amd.com>
+
+commit 67120728ce88e94617ee82f9bc42222fbe02d473
+Author: Lewis Carroll <lewis.carroll@amd.com>
+Date:   Thu Mar 25 23:34:09 2021 -0500
+
+    Limit Family 17h enabling to Zen2
+    
+    Family 17h includes Zen1 and Zen2 CPUs. HSMP capability does not exist
+    on Zen1 models (model < 0x30).
+    
+    Note although HSMP capability exists on family 17h, AMD does not
+    support use of HSMP functions on family 17h and the following
+    warning message will be emitted when any library function is first
+    called on a family 17h models 30h-3f device:
+    WARNING: libhsmp not supported on AMD CPU Family 0x17 CPUs
+    
+    Signed-off-by: Lewis Carroll <lewis.carroll@amd.com>
+    Signed-off-by: Nathan Fontenot <nathan.fontenot@amd.com>
+
+commit de5c2c55c14f6f60470a1d851e642a8b477c4345
+Author: Lewis Carroll <lewis.carroll@amd.com>
+Date:   Thu Mar 25 23:23:46 2021 -0500
+
+    Fix use of socket ID vs. NBIO index
+    
+    The intent of the nbios array stored in hsmp_data is to hold the NBIO ID
+    (unique to each socket) and the PCI bus base and limit values for each
+    NBIO tile to assist with translating a PCI bus to the socket and NBIO
+    tile ID hosting that bus. The PCI device for each NBIO is kept here as
+    well as a matter of convenience. All HSMP messages must be sent to an
+    IOHC device in the specific socket (0 or 1) for which the message is
+    intended. After sorting the NBIOs array based on the bus base/limit,
+    index 0 into that array will correspond with the lowest bus in socket 0,
+    and if present, index 4 into that array will correspond with the lowest
+    bus in socket 1. While technically using any IOHC device in a socket
+    will work to communicate with the HSMP mailbox, the first (lowest bus
+    number) IOHC device is used as a matter of convention. Therefore, when
+    accessing the correct PCI device, socket ID must be multiplied by 4 to
+    get to the NBIO array index.
+    
+    In a 1P system, NBIO array indexes 4-7 will be empty, so test for a
+    NULL pointer for the PCI device.
+    
+    Signed-off-by: Lewis Carroll <lewis.carroll@amd.com>
+    Signed-off-by: Nathan Fontenot <nathan.fontenot@amd.com>
+
+commit 7515ed472178c07e998419c1a12094577db25592
+Author: Nathan Fontenot <nathan.fontenot@amd.com>
+Date:   Thu Mar 25 23:14:06 2021 -0500
+
+    Log file entries should be tee'ed to stdout
+    
+    The run_tests.sh script should tee all output to the log
+    file to stdout if the verbose flag is specified.
+    
+    Signed-off-by: Nathan Fontenot <nathan.fontenot@amd.com>
+
+commit 8bbd99332ebc327b17d80e9320ff96827b40529a
+Author: Nathan Fontenot <nathan.fontenot@amd.com>
+Date:   Thu Mar 25 23:13:55 2021 -0500
+
+    Add PCI Debug Option
+    
+    The debug output from libhsmp can get very verbose when printing
+    the device, address, and data for every PCI read and write. This
+    information isn't particularly useful for general libhsmp debugging
+    but may ber helpful when looking at specific PCI reads/writes.
+    
+    Update the libhdmp debug output to have the individual PCI reads and
+    write debug information controlled by a new HSMP_DEBUG_PCI option.
+    This allows the informtaion to be dumped if needed but hidden for
+    general debugging.
+    
+    Signed-off-by: Nathan Fontenot <nathan.fontenot@amd.com>
+
+commit 657e74e440d4c2324ec7278968c26e2267189ad6
+Author: Nathan Fontenot <nathan.fontenot@amd.com>
+Date:   Thu Mar 25 23:13:36 2021 -0500
+
+    Update test log formatting
+    
+    Add additional blank lines to the test log file to make reading the
+    log file easier. No functional changes.
+    
+    Signed-off-by: Nathan Fontenot <nathan.fontenot@amd.com>
+
+commit 4f9b03e3e8c929f209ec4c3a3e7a1880109b92a0
+Author: Nathan Fontenot <nathan.fontenot@amd.com>
+Date:   Thu Mar 18 13:15:04 2021 -0500
+
+    Import of initial libhsmp
+    
+    Importing of initial libhsmp version 1.0.
+    
+    Signed-off-by: Nathan Fontenot <nathan.fontenot@amd.com>
+
+commit 9accb41afbbfe6725bdee3ef2d1d4a66a11d1d3b
+Author: Nathan Fontenot <nathan.fontenot@amd.com>
+Date:   Wed Jan 27 12:06:39 2021 -0600
+
+    Initial commit
