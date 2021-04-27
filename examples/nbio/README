@@ -4,7 +4,7 @@ Version 1.3  April 9, 2021
 Author: Lewis Carroll <lewis.carroll@amd.com>
 
 
-Usage: amd_iopm_util [option]
+Usage: amd-iopm-util [option]
 
 This utility leverages libhsmp to support disabling Dynamic Power Management
 (DPM) for all PCI-e root complexes in the system and locks the logic into the
