@@ -78,6 +78,24 @@ enum hsmp_msg_t {
 	HSMP_GET_DDR_BANDWIDTH			= 20,
 };
 
+/*
+ * Taken from the PPR, the intf_support table describes the
+ * highest HSMP interface supported for each HSMP interface
+ * version. This is used to validate interface support in
+ * the library.
+ *
+ * NOTE: This should be updated when support for new HSMP
+ * interface versions is added.
+ */
+#define SMU_INTF_SUPPORTED	3
+
+static enum hsmp_msg_t intf_support[] = {
+	0,
+	HSMP_GET_C0_PERCENT,		/* Interface Version 1 */
+	HSMP_SET_NBIO_DPM_LEVEL,	/* Interface Version 2 */
+	HSMP_GET_DDR_BANDWIDTH,		/* Interface Version 3 */
+};
+
 struct hsmp_message {
 	enum hsmp_msg_t	msg_num;	/* Message number */
 	u16		num_args;	/* Number of arguments in message */
@@ -113,7 +131,8 @@ static struct {
 	struct nbio_dev		nbios[MAX_NBIOS];	/* Array of DevID 0x1480 devices */
 	struct cpu_dev		cpus[MAX_CPUS];
 	union smu_fw_ver	smu_firmware;		/* SMU firmware version code */
-	unsigned int		hsmp_proto_ver;		/* HSMP implementation level */
+	unsigned int		smu_intf_ver;		/* HSMP implementation level */
+	unsigned int		supported_intf;		/* SMU interface v ersion supported */
 	unsigned int		x86_family;		/* Family number */
 	int			initialized;
 	int			lock_fd;
@@ -164,26 +183,7 @@ char *hsmp_strerror(int err, int errno_val)
  */
 static bool msg_id_supported(enum hsmp_msg_t msg_id)
 {
-	enum hsmp_msg_t max_supported_id;
-
-	switch (hsmp_data.hsmp_proto_ver) {
-	case 1:
-		max_supported_id = HSMP_GET_C0_PERCENT;
-		break;
-
-	case 2:
-		max_supported_id = HSMP_SET_NBIO_DPM_LEVEL;
-		break;
-
-	case 3:
-		max_supported_id = HSMP_GET_DDR_BANDWIDTH;
-		break;
-
-	default:
-		return false;
-	}
-
-	return msg_id <= max_supported_id;
+	return msg_id <= intf_support[hsmp_data.supported_intf];
 }
 
 #define PCI_VENDOR_ID_AMD		0x1022
@@ -543,8 +543,16 @@ static int hsmp_probe(void)
 				return -1;
 			}
 
-			hsmp_data.hsmp_proto_ver = msg.response[0];
-			pr_debug("Interface Version: %d\n", hsmp_data.hsmp_proto_ver);
+			hsmp_data.smu_intf_ver = msg.response[0];
+			pr_debug("Interface Version: %d\n", hsmp_data.smu_intf_ver);
+
+			/*
+			 * If the SMU interface version is lower than what libhsmp
+			 * supports, reduce the supported interface version to match
+			 * the SMU interface version.
+			 */
+			if (hsmp_data.smu_intf_ver < hsmp_data.supported_intf)
+				hsmp_data.supported_intf = hsmp_data.smu_intf_ver;
 
 			socket_found = 1;
 		}
@@ -826,6 +834,9 @@ static int hsmp_init(void)
 	if (err)
 		return -1;
 
+	/* Set supported HSMP interface version */
+	hsmp_data.supported_intf = SMU_INTF_SUPPORTED;
+
 	/* Offsets in PCIe config space for 0x1480 DevID (IOHC) */
 	smu.index_reg  = 0x60;
 	smu.data_reg   = 0x64;
@@ -925,7 +936,7 @@ int hsmp_interface_version(int *version)
 		return -1;
 	}
 
-	*version = hsmp_data.hsmp_proto_ver;
+	*version = hsmp_data.smu_intf_ver;
 	return 0;
 }
 
