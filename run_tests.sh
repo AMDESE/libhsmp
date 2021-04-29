@@ -38,12 +38,14 @@ function run_cmd()
 running_total=0
 running_passed=0
 running_failed=0
+running_ebadmsg=0
 
 function update_test_results()
 {
 	running_total=0
 	running_passed=0
 	running_failed=0
+	running_ebadmsg=0
 
 	while IFS= read -r line; do
 		if [ -n "${line}" ]; then
@@ -54,9 +56,42 @@ function update_test_results()
 				running_passed=$(( running_passed + l_array[1] ))
 			elif [ "${l_array[0]}" = "Failed:" ]; then
 				running_failed=$(( running_failed + l_array[1] ))
+			elif [ "${l_array[0]}" = "EBADMSG:" ]; then
+				running_ebadmsg=$(( running_ebadmsg + l_array[1] ))
 			fi
 		fi
 	done < $LOG_FILE
+}
+
+function print_ebadmsg_interfaces()
+{
+	local saved_intf
+	local intf
+
+	declare -a ebadmsg_intfs
+
+	while IFS= read -r line; do
+		if [ -n "${line}" ]; then
+			read -a l_array <<< $line
+			intf="${l_array[1]}"
+
+			if [ "${l_array[0]}" = "Testing" ] &&
+			   [ "${intf: -1}" = "." ]; then
+				saved_intf="$intf"
+			fi
+
+			# Look for '- Received EBADMSG...'
+			if [ "${l_array[2]}" = "EBADMSG," ]; then
+				ebadmsg_intfs+=( ${saved_intf%%.*} )
+			fi
+		fi
+	done < $LOG_FILE
+
+	echo ""
+	echo "The following interfaces received EBADMSG and may not be"
+	echo "supported by the current SMU firmware:"
+	printf "- %s\n" "${ebadmsg_intfs[@]}" | sort -u
+	echo ""
 }
 
 function print_results()
@@ -64,18 +99,21 @@ function print_results()
 	local saved_total=$running_total
 	local saved_passed=$running_passed
 	local saved_failed=$running_failed
+	local saved_ebadmsg=$running_ebadmsg
 
 	local total
 	local passed
 	local failed
+	local ebadmsg
 
 	update_test_results
 
 	total=$((running_total - saved_total))
 	passed=$((running_passed - saved_passed))
 	failed=$((running_failed - saved_failed))
+	ebadmsg=$((running_ebadmsg - saved_ebadmsg))
 
-	echo "    Total Tests:" $total", Passed:" $passed", Failed:" $failed
+	echo "    Total Tests:" $total", Passed:" $passed", Failed:" $failed", EBADMSG:" $ebadmsg
 	echo ""
 }
 
@@ -204,3 +242,8 @@ say "#####################"
 say "Total Tests:    "$running_total
 say "Passed:         "$running_passed
 say "Failed:         "$running_failed
+say "EBADMSG:        "$running_ebadmsg
+
+if [ $running_ebadmsg -ne 0 ]; then
+	print_ebadmsg_interfaces
+fi

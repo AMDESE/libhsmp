@@ -37,6 +37,7 @@ int unsupported_interface;
 int total_tests;
 int passed_tests;
 int failed_tests;
+int ebadmsg_tests;
 
 int verbose = 0;
 int privileged_user = 0;
@@ -107,11 +108,24 @@ void pr_fail(int rc)
 		pr_test_note("Received unexpected error: %s\n", hsmp_strerror(rc, errno));
 }
 
+void pr_ebadmsg(void)
+{
+	total_tests++;
+	ebadmsg_tests++;
+	test_passed = 0;
+
+	sprintf(test_buffer + buf_offset, "=> UNKNOWN\n");
+	printf("%s", test_buffer);
+
+	pr_test_note("Received EBADMSG, interface may not be supported by SMU.\n");
+}
+
 #define einval_error(_r, _e)	((_r) == -1 && (_e) == EINVAL)
 #define eperm_error(_r, _e)	(!privileged_user && (_r) == -1 && (_e) == EPERM)
 #define enotsup_error(_r, _e)	(privileged_user && (_r) == -1 && (_e) == ENOTSUP)
 #define enomsg_error(_r, _e)	(privileged_user && unsupported_interface && \
 				 (_r) == -1 && (_e) == ENOMSG)
+#define ebadmsg_error(_r, _e)	(privileged_user && (_r) == -1 && (_e) == EBADMSG)
 
 /*
  * The following routines for evaluating return codes from a test
@@ -152,6 +166,9 @@ void eval_for_failure(int rc)
 			pr_pass();
 			pr_test_note("received expected ENOMSG return code\n");
 			return;
+		} else if (ebadmsg_error(rc, errno)) {
+			pr_ebadmsg();
+			return;
 		}
 	} else if (eperm_error(rc, errno)) {
 		pr_pass();
@@ -181,6 +198,9 @@ void eval_for_pass_results(int rc, int expected, int result)
 		} else if (enomsg_error(rc, errno)) {
 			pr_pass();
 			pr_test_note("received expected ENOMSG return code\n");
+			return;
+		} else if (ebadmsg_error(rc, errno)) {
+			pr_ebadmsg();
 			return;
 		}
 	} else if (eperm_error(rc, errno)) {
@@ -807,6 +827,7 @@ void print_results(void)
 	printf("Total Tests:  %d\n", total_tests);
 	printf("Passed:       %d\n", passed_tests);
 	printf("Failed:       %d\n", failed_tests);
+	printf("EBADMSG:      %d\n", ebadmsg_tests);
 }
 
 struct hsmp_testcase hsmp_testcases[] = {
