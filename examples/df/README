@@ -1,0 +1,76 @@
+AMD Data Fabric Power Management Utility
+========================================
+Version 1.1  April 27, 2021
+Author: Lewis Carroll <lewis.carroll@amd.com>
+
+
+Usage: amd-df-util [option]
+
+This utility configures power management for the EPYC Data Fabric. For a 2P
+system, you can set the limits for xGMI Dynamic Link width Management (DLWM)
+and for both 1P and 2P systems you can set the fabric P-state to a fixed value
+or return it to normal operation. Note wider link widths and lower fabric
+P-state values consume more power. Setting limits other than the defaults
+will increase idle power consumption.
+
+Options:
+-d  --defaults        Equivalent to --min-link-width auto --max-link-width auto
+                      --fabric-pstate auto
+-f  --fabric-pstate   Set data fabric P-state:
+                      0 - fixed fabric P-State P0
+                      1 - fixed fabric P-State P1
+                      2 - fixed fabric P-State P2
+                      3 - fixed fabric P-State equivalent to PROC_HOT asserted
+                      auto - autonomous fabric P-state selection
+-m  --min-link-width  Set minimum xGMI link width (2P system only):
+-x  --max-link-width  Set maximum xGMI link width (2P system only):
+                      2 - x2
+                      8 - x8
+                      16 - x16
+                      auto - set min or max limit to the platform default
+-g  --get-status      Get the current link width and fabric clocks
+                      (not the configured min/max or P-state)
+-v  --version         Display program version and exit
+-h  --help            Display program usage and exit
+
+Link width limit manipulation is only possible for 2P systems. These options
+are ignored on a 1P system. Setting the same value for min and max link width
+will disable DLWM and set a fixed link width. Since both min and max link width
+must be set at the same time in hardware, if one of min/max link width is not
+specified, the platform default will be used (same as if the value auto had
+been specified).
+
+Examples:
+amd-df-util --min-link-width 8 --fabric-pstate 0
+Enable DLWM and allow x8 and x16 link widths only (disable x2 link width), set
+fixed data fabric P-state P0
+
+amd-df-util --min-link-width 8 --max-link-width 8
+Disable DLWM and set the link width to x8
+
+amd-df-util --defaults
+Enable DLWM and allow all supported link widths (normal operation)
+Set automatic fabric P-state selection
+
+
+Run Requirements
+================
+* Must be run as root
+
+
+Building
+========
+Dependencies: libhsmp (follow build instructions in the README for libhsmp)
+  Note: libhsmp requires autoconf, libtool and the PCI development library
+        libpci-dev (Ubuntu) or pciutils-devel (Red Hat / CentOS)
+
+Depending on your system, you may need to update the dynamic linker cache
+after installing libhsmp. You should be able to do this with sudo ldconfig.
+
+If you wish to generate debug output from HSMP messages you should configure
+libhsmp for debug output (configure libhsmp with --enable-debug).
+
+If you wish to also enable family 17h (Rome), you should configure libhsmp
+with --enable-fam17.
+
+The default makefile target is the executable, and a clean target is supported.
