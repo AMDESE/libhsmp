@@ -90,7 +90,7 @@ function print_ebadmsg_interfaces()
 	echo ""
 	echo "The following interfaces received EBADMSG and may not be"
 	echo "supported by the current SMU firmware:"
-	printf "- %s\n" "${ebadmsg_intfs[@]}" | sort -u
+	printf "%s\n" "${ebadmsg_intfs[@]}" | sort -u
 	echo ""
 }
 
