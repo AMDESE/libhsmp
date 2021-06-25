@@ -1,0 +1,46 @@
+# Modified Files
+aclocal.m4
+m4/libtool.m4
+
+# Untracked Files
+.deps/
+.libs/
+autom4te.cache/
+
+INSTALL
+Makefile
+Makefile.in
+compile
+config.guess
+config.h
+config.h.in
+config.log
+config.status
+config.sub
+configure
+depcomp
+install-sh
+libtool
+ltmain.sh
+missing
+stamp-h1
+
+libhsmp.la
+libhsmp.lo
+libhsmp.o
+libhsmp.spec
+
+hsmp_test
+hsmp_test.o
+hsmp_test_static
+hsmp_test_static-hsmp_test.o
+
+examples/hsmpctl/hsmpctl
+examples/hsmpctl/hsmpctl.o
+examples/hsmpctl/hsmpctld
+examples/hsmpctl/hsmpctld.o
+examples/df/amd-df-util
+examples/nbio/amd-iopm-util
+
+# Ignore .swp files
+*.swp
