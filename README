@@ -11,6 +11,16 @@ be found in the Processor Programming Reference (PPR) for Family
 
 https://developer.amd.com/resources/epyc-resources/epyc-specifications
 
+Please note that HSMP support must be enabled in system firmware. Most
+platforms ship with HSMP support disabled by default. The firmware
+system setup menu implementation will differ from platform to platform
+so please consult the documentation for your specific platform. On AMD
+reference firmware, the HSMP support menu can be found at the following
+path (usually in an Advanced menu):
+AMD CBS -> NBIO Common Options -> SMU Common Options -> HSMP Support
+The value "Auto" is equivalent to the value "Disabled" - you must
+change this value to "Enabled" to enable HSMP support.
+
 1. Disclaimer
 =============
 
