@@ -22,8 +22,7 @@
 #define PCI_VENDOR_ID_AMD	0x1022
 #define F17F19_IOHC_DEVID	0x1480
 
-#define MAX_NBIOS       8
-#define MAX_SOCKETS	2
+int num_sockets;
 
 struct nbio_dev {
 	struct pci_dev	*dev;	   /* Pointer to PCI-e device in the socket */
@@ -31,6 +30,7 @@ struct nbio_dev {
 	uint8_t		bus_base;  /* Lowest hosted PCI-e bus number */
 	uint8_t		bus_limit; /* Highest hosted PCI-e bus number + 1 */
 	int		index;
+	int		socket;
 };
 
 struct nbio_dev *get_nbio(int idx);

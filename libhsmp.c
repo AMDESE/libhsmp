@@ -110,8 +110,6 @@ struct cpu_dev {
 	int	apicid;
 };
 
-#define MAX_SOCKETS	2
-#define MAX_NBIOS	8
 #define MAX_CPUS	256
 
 static struct {
@@ -378,7 +376,7 @@ static int hsmp_probe(void)
 	 * version messages take no arguments and return one.
 	 */
 	socket_found = 0;
-	for (socket_id = 0; socket_id < MAX_SOCKETS; socket_id++) {
+	for (socket_id = 0; socket_id < num_sockets; socket_id++) {
 		if (!socket_id_to_nbio(socket_id))
 			break;
 
@@ -841,7 +839,7 @@ int hsmp_set_system_boost_limit(uint32_t boost_limit)
 	if (err)
 		return -1;
 
-	for (socket_id = 0; socket_id < MAX_SOCKETS; socket_id++) {
+	for (socket_id = 0; socket_id < num_sockets; socket_id++) {
 		if (!socket_id_to_nbio(socket_id))
 			break;
 
@@ -949,7 +947,7 @@ int hsmp_set_xgmi_width(enum hsmp_xgmi_width min_width,
 	msg.num_args = 1;
 	msg.args[0] = (min << 8) | max;
 
-	for (socket_id = 0; socket_id < MAX_SOCKETS; socket_id++) {
+	for (socket_id = 0; socket_id < num_sockets; socket_id++) {
 		if (!socket_id_to_nbio(socket_id))
 			break;
 
@@ -1099,7 +1097,6 @@ int hsmp_set_nbio_pstate(u8 bus_num, enum hsmp_nbio_pstate pstate)
 	struct hsmp_message msg = { 0 };
 	struct nbio_dev *nbio;
 	u8 dpm_min, dpm_max;
-	int socket_id;
 	int err;
 
 	err = hsmp_enter(HSMP_SET_NBIO_DPM_LEVEL);
@@ -1126,13 +1123,11 @@ int hsmp_set_nbio_pstate(u8 bus_num, enum hsmp_nbio_pstate pstate)
 		return -1;
 	}
 
-	socket_id = (nbio->index >= (MAX_NBIOS / 2)) ? 1 : 0;
-
 	msg.msg_num = HSMP_SET_NBIO_DPM_LEVEL;
 	msg.num_args = 1;
 	msg.args[0] = (nbio->id << 16) | (dpm_max << 8) | dpm_min;
 
-	return hsmp_send_message(socket_id, &msg);
+	return hsmp_send_message(nbio->socket, &msg);
 }
 
 int hsmp_next_bus(int idx, u8 *bus_num)
