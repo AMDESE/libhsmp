@@ -26,6 +26,7 @@
 
 #include "libhsmp.h"
 #include "smn.h"
+#include "nbio.h"
 
 #ifdef DEBUG_HSMP
 #define pr_debug(...)   printf("[libhsmp] " __VA_ARGS__)
@@ -103,13 +104,6 @@ union smu_fw_ver {
 	u32 raw_u32;
 };
 
-struct nbio_dev {
-	struct pci_dev *dev;		/* Pointer to PCI-e device in the socket */
-	u8		id;		/* NBIO tile number within the socket */
-	u8		bus_base;	/* Lowest hosted PCI-e bus number */
-	u8		bus_limit;	/* Highest hosted PCI-e bus number + 1 */
-};
-
 struct cpu_dev {
 	int	valid;
 	int	socket_id;
@@ -121,8 +115,6 @@ struct cpu_dev {
 #define MAX_CPUS	256
 
 static struct {
-	struct pci_access	*pacc;			/* PCIlib */
-	struct nbio_dev		nbios[MAX_NBIOS];	/* Array of DevID 0x1480 devices */
 	struct cpu_dev		cpus[MAX_CPUS];
 	union smu_fw_ver	smu_firmware;		/* SMU firmware version code */
 	unsigned int		smu_intf_ver;		/* HSMP implementation level */
@@ -178,25 +170,6 @@ char *hsmp_strerror(int err, int errno_val)
 static bool msg_id_supported(enum hsmp_msg_t msg_id)
 {
 	return msg_id <= intf_support[hsmp_data.supported_intf];
-}
-
-#define PCI_VENDOR_ID_AMD		0x1022
-#define F17F19_IOHC_DEVID		0x1480
-
-/*
- * Return the PCI device pointer for the IOHC dev hosting the lowest numbered
- * PCI bus in the specified socket (0 or 1). If socket_id 1 is passed on a 1P
- * system, NULL will be returned.
- */
-static struct pci_dev *socket_id_to_dev(int socket_id)
-{
-	int idx;
-
-	if (socket_id < 0 || socket_id >= MAX_SOCKETS)
-		return NULL;
-
-	idx = socket_id * 4;
-	return hsmp_data.nbios[idx].dev;
 }
 
 #define HSMP_LOCK_FILE	"/var/lock/hsmp"
@@ -324,14 +297,14 @@ retry:
 
 static int hsmp_send_message(int socket_id, struct hsmp_message *msg)
 {
-	struct pci_dev *root_dev;
+	struct nbio_dev *nbio;
 	int err;
 #ifdef DEBUG_HSMP
 	unsigned int arg_num = 0;
 #endif
 
-	root_dev = socket_id_to_dev(socket_id);
-	if (!root_dev) {
+	nbio = socket_id_to_nbio(socket_id);
+	if (!nbio) {
 		errno = EINVAL;
 		return -1;
 	}
@@ -348,27 +321,10 @@ static int hsmp_send_message(int socket_id, struct hsmp_message *msg)
 	}
 #endif
 
-	err = _hsmp_send_message(root_dev, msg);
+	err = _hsmp_send_message(nbio->dev, msg);
 	hsmp_unlock();
 
 	return err;
-}
-
-/*
- * Takes a PCI-e bus number and returns the index into the NBIOs array
- * matching the host NBIO device. Returns -1 if the bus is not found.
- */
-static int bus_to_nbio(u8 bus)
-{
-	int idx;
-
-	for (idx = 0; idx < MAX_NBIOS; idx++) {
-		if (bus >= hsmp_data.nbios[idx].bus_base &&
-		    bus <= hsmp_data.nbios[idx].bus_limit)
-			return idx;
-	}
-
-	return -1;
 }
 
 static int cpu_apicid(int cpu)
@@ -423,7 +379,7 @@ static int hsmp_probe(void)
 	 */
 	socket_found = 0;
 	for (socket_id = 0; socket_id < MAX_SOCKETS; socket_id++) {
-		if (!socket_id_to_dev(socket_id))
+		if (!socket_id_to_nbio(socket_id))
 			break;
 
 		msg.msg_num = HSMP_TEST;
@@ -557,145 +513,6 @@ static int get_system_info(void)
 	return -1;
 }
 
-static void hsmp_clear_nbio_table(void)
-{
-	int i;
-
-	for (i = 0; i < MAX_NBIOS; i++) {
-		hsmp_data.nbios[i].dev = NULL;
-		hsmp_data.nbios[i].id = 0;
-		hsmp_data.nbios[i].bus_base = 0xFF;
-		hsmp_data.nbios[i].bus_limit = 0;
-	}
-}
-
-static void hsmp_cleanup_nbios(void)
-{
-	if (hsmp_data.pacc) {
-		pci_cleanup(hsmp_data.pacc);
-		hsmp_data.pacc = NULL;
-	}
-
-	hsmp_clear_nbio_table();
-}
-
-static int hsmp_setup_nbios(void)
-{
-	struct pci_dev *dev;
-	int num_nbios;
-	u8 base;
-	int i;
-
-	hsmp_clear_nbio_table();
-
-	/* Setup pcilib */
-	hsmp_data.pacc = pci_alloc();
-	if (!hsmp_data.pacc) {
-		pr_debug("Failed to allocate PCI access structures\n");
-		goto nbio_setup_error;
-	}
-
-	/* First, find all IOHC devices (root complex) */
-	pci_init(hsmp_data.pacc);
-	pci_scan_bus(hsmp_data.pacc);
-
-	num_nbios = 0;
-	for (dev = hsmp_data.pacc->devices; dev; dev = dev->next) {
-		pci_fill_info(dev, PCI_FILL_IDENT);
-
-		if (dev->vendor_id != PCI_VENDOR_ID_AMD ||
-		    dev->device_id != F17F19_IOHC_DEVID)
-			continue;
-
-		base = dev->bus;
-		pr_debug("Found IOHC dev on bus 0x%02X\n", base);
-
-		if (num_nbios == MAX_NBIOS) {
-			pr_debug("Exceeded max NBIO devices\n");
-			goto nbio_setup_error;
-		}
-
-		hsmp_data.nbios[num_nbios].dev = dev;
-		hsmp_data.nbios[num_nbios].bus_base = base;
-		num_nbios++;
-	}
-
-	if (num_nbios == 0 || (num_nbios % (MAX_NBIOS / 2))) {
-		pr_debug("Expected %d or %d IOHC devices, found %d\n",
-			 MAX_NBIOS / 2, MAX_NBIOS, num_nbios);
-		goto nbio_setup_error;
-	}
-
-	/* Sort the table by bus_base */
-	for (i = 0; i < num_nbios - 1; i++) {
-		int j;
-
-		for (j = i + 1; j < num_nbios; j++) {
-			if (hsmp_data.nbios[j].bus_base < hsmp_data.nbios[i].bus_base) {
-				struct pci_dev *temp_dev = hsmp_data.nbios[i].dev;
-				u8 temp_bus_base         = hsmp_data.nbios[i].bus_base;
-
-				hsmp_data.nbios[i].dev      = hsmp_data.nbios[j].dev;
-				hsmp_data.nbios[i].bus_base = hsmp_data.nbios[j].bus_base;
-
-				hsmp_data.nbios[j].dev      = temp_dev;
-				hsmp_data.nbios[j].bus_base = temp_bus_base;
-			}
-		}
-	}
-
-	/* Calculate bus limits - we can safely assume no overlapping ranges */
-	for (i = 0; i < num_nbios; i++) {
-		if (i < num_nbios - 1)
-			hsmp_data.nbios[i].bus_limit = hsmp_data.nbios[i + 1].bus_base - 1;
-		else
-			hsmp_data.nbios[i].bus_limit = 0xFF;
-	}
-
-	/* Finally get IOHC ID for each bus base */
-	for (i = 0; i < num_nbios; i++) {
-		int err, idx;
-		u32 addr, val;
-
-		addr = SMN_IOHCMISC0_NB_BUS_NUM_CNTL + (i & 0x3) * SMN_IOHCMISC_OFFSET;
-		err = smn_read(hsmp_data.nbios[i].dev, addr, &val);
-		if (err) {
-			pr_debug("Error %d accessing socket %d IOHCMISC%d\n",
-				 err, i >> 2, i & 0x3);
-			goto nbio_setup_error;
-		}
-
-		pr_debug("Socket %d IOHC%d smn_read addr 0x%08X = 0x%08X\n",
-			 i >> 2, i & 0x3, addr, val);
-		base = val & 0xFF;
-
-		/* Look up this bus base in our array */
-		idx = bus_to_nbio(base);
-		if (idx == -1) {
-			pr_debug("Unable to map bus 0x%02X to an IOHC device\n", base);
-			goto nbio_setup_error;
-		}
-
-		hsmp_data.nbios[idx].id = i & 0x3;
-	}
-
-	/* Dump the final table */
-#ifdef DEBUG_HSMP
-	for (i = 0; i < MAX_NBIOS; i++) {
-		pr_debug("IDX %d: Bus range 0x%02X - 0x%02X --> Socket %d IOHC %d\n",
-			 i, hsmp_data.nbios[i].bus_base, hsmp_data.nbios[i].bus_limit,
-			 i >> 2, hsmp_data.nbios[i].id);
-	}
-#endif
-
-	return 0;
-
-nbio_setup_error:
-	hsmp_cleanup_nbios();
-	errno = ENODEV;
-	return -1;
-}
-
 static int read_id(char *line)
 {
 	char *c = line;
@@ -782,7 +599,7 @@ static int hsmp_init(void)
 	/* Set supported HSMP interface version */
 	hsmp_data.supported_intf = SMN_INTF_SUPPORTED;
 
-	err = hsmp_setup_nbios();
+	err = setup_nbios();
 	if (err)
 		return -1;
 
@@ -791,7 +608,7 @@ static int hsmp_init(void)
 		err = hsmp_probe();
 
 	if (err) {
-		hsmp_cleanup_nbios();
+		cleanup_nbios();
 		return err;
 	}
 
@@ -830,7 +647,7 @@ static int hsmp_enter(enum hsmp_msg_t msg_id)
 
 static void hsmp_fini(void)
 {
-	hsmp_cleanup_nbios();
+	cleanup_nbios();
 }
 
 void __attribute__ ((destructor)) hsmp_fini(void);
@@ -1025,7 +842,7 @@ int hsmp_set_system_boost_limit(u32 boost_limit)
 		return -1;
 
 	for (socket_id = 0; socket_id < MAX_SOCKETS; socket_id++) {
-		if (!socket_id_to_dev(socket_id))
+		if (!socket_id_to_nbio(socket_id))
 			break;
 
 		err = _set_socket_boost_limit(socket_id, boost_limit);
@@ -1133,7 +950,7 @@ int hsmp_set_xgmi_width(enum hsmp_xgmi_width min_width,
 	msg.args[0] = (min << 8) | max;
 
 	for (socket_id = 0; socket_id < MAX_SOCKETS; socket_id++) {
-		if (!socket_id_to_dev(socket_id))
+		if (!socket_id_to_nbio(socket_id))
 			break;
 
 		err = hsmp_send_message(socket_id, &msg);
@@ -1282,15 +1099,15 @@ int hsmp_set_nbio_pstate(u8 bus_num, enum hsmp_nbio_pstate pstate)
 	struct hsmp_message msg = { 0 };
 	struct nbio_dev *nbio;
 	u8 dpm_min, dpm_max;
-	int idx, socket_id;
+	int socket_id;
 	int err;
 
 	err = hsmp_enter(HSMP_SET_NBIO_DPM_LEVEL);
 	if (err)
 		return -1;
 
-	idx = bus_to_nbio(bus_num);
-	if (idx == -1) {
+	nbio = bus_to_nbio(bus_num);
+	if (!nbio) {
 		errno = EINVAL;
 		return -1;
 	}
@@ -1309,8 +1126,7 @@ int hsmp_set_nbio_pstate(u8 bus_num, enum hsmp_nbio_pstate pstate)
 		return -1;
 	}
 
-	nbio = &hsmp_data.nbios[idx];
-	socket_id = (idx >= (MAX_NBIOS / 2)) ? 1 : 0;
+	socket_id = (nbio->index >= (MAX_NBIOS / 2)) ? 1 : 0;
 
 	msg.msg_num = HSMP_SET_NBIO_DPM_LEVEL;
 	msg.num_args = 1;
@@ -1321,34 +1137,36 @@ int hsmp_set_nbio_pstate(u8 bus_num, enum hsmp_nbio_pstate pstate)
 
 int hsmp_next_bus(int idx, u8 *bus_num)
 {
-	int err, rv;
+	struct nbio_dev *nbio;
+	int err;
 
 	/* Perform library initialization and HSMP test message */
 	err = hsmp_enter(0);
 	if (err)
 		return err;
 
-	if (!bus_num || idx < 0 || idx >= MAX_NBIOS) {
+	if (!bus_num) {
 		errno = EINVAL;
 		return -1;
 	}
 
-	if (!hsmp_data.nbios[idx].dev) {  /* No IOHC at this array index */
+	nbio = get_nbio(idx);
+	if (!nbio || !nbio->dev) {  /* No IOHC at this array index */
 		errno = ENODEV;
 		return -1;
 	}
 
-	*bus_num = hsmp_data.nbios[idx].bus_base;
+	*bus_num = nbio->bus_base;
 
 	/*
 	 * Test if the next iteration would succeed. Return idx if so,
 	 * return 0 if not.
 	 */
-	rv = idx + 1;
-	if (rv == MAX_NBIOS || !hsmp_data.nbios[rv].dev)
-		rv = 0;
+	nbio = get_nbio(idx + 1);
+	if (!nbio || !nbio->dev)
+		return 0;
 
-	return rv;
+	return idx + 1;
 }
 
 int hsmp_ddr_bandwidths(int socket_id, u32 *max_bw,
