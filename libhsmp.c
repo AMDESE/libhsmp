@@ -93,15 +93,15 @@ static enum hsmp_msg_t intf_support[] = {
 
 struct hsmp_message {
 	enum hsmp_msg_t	msg_num;	/* Message number */
-	u16		num_args;	/* Number of arguments in message */
-	u16		response_sz;	/* Number of expected response words */
-	u32		args[8];	/* Argument(s) */
-	u32		response[8];	/* Response word(s) */
+	uint16_t	num_args;	/* Number of arguments in message */
+	uint16_t	response_sz;	/* Number of expected response words */
+	uint32_t	args[8];	/* Argument(s) */
+	uint32_t	response[8];	/* Response word(s) */
 };
 
 union smu_fw_ver {
 	struct smu_fw_version ver;
-	u32 raw_u32;
+	uint32_t raw_u32;
 };
 
 struct cpu_dev {
@@ -210,7 +210,7 @@ static int _hsmp_send_message(struct pci_dev *root_dev, struct hsmp_message *msg
 	struct timespec one_ms = { 0, 1000 * 1000 };
 	unsigned int arg_num = 0;
 	int err, timeout;
-	u32 mbox_status;
+	uint32_t mbox_status;
 
 	/* Zero the status register */
 	mbox_status = HSMP_STATUS_NOT_READY;
@@ -689,7 +689,7 @@ int hsmp_interface_version(int *version)
 	return 0;
 }
 
-int hsmp_socket_power(int socket_id, u32 *power_mw)
+int hsmp_socket_power(int socket_id, uint32_t *power_mw)
 {
 	struct hsmp_message msg = { 0 };
 	int err;
@@ -714,7 +714,7 @@ int hsmp_socket_power(int socket_id, u32 *power_mw)
 	return 0;
 }
 
-int hsmp_set_socket_power_limit(int socket_id, u32 power_limit)
+int hsmp_set_socket_power_limit(int socket_id, uint32_t power_limit)
 {
 	struct hsmp_message msg = { 0 };
 	int err;
@@ -730,7 +730,7 @@ int hsmp_set_socket_power_limit(int socket_id, u32 power_limit)
 	return hsmp_send_message(socket_id, &msg);
 }
 
-int hsmp_socket_power_limit(int socket_id, u32 *power_limit)
+int hsmp_socket_power_limit(int socket_id, uint32_t *power_limit)
 {
 	struct hsmp_message msg = { 0 };
 	int err;
@@ -755,7 +755,7 @@ int hsmp_socket_power_limit(int socket_id, u32 *power_limit)
 	return 0;
 }
 
-int hsmp_socket_max_power_limit(int socket_id, u32 *max_power)
+int hsmp_socket_max_power_limit(int socket_id, uint32_t *max_power)
 {
 	struct hsmp_message msg = { 0 };
 	int err;
@@ -780,7 +780,7 @@ int hsmp_socket_max_power_limit(int socket_id, u32 *max_power)
 	return 0;
 }
 
-int hsmp_set_cpu_boost_limit(int cpu, u32 boost_limit)
+int hsmp_set_cpu_boost_limit(int cpu, uint32_t boost_limit)
 {
 	struct hsmp_message msg = { 0 };
 	int socket_id;
@@ -810,7 +810,7 @@ int hsmp_set_cpu_boost_limit(int cpu, u32 boost_limit)
 	return hsmp_send_message(socket_id, &msg);
 }
 
-static int _set_socket_boost_limit(int socket_id, u32 boost_limit)
+static int _set_socket_boost_limit(int socket_id, uint32_t boost_limit)
 {
 	struct hsmp_message msg = { 0 };
 
@@ -821,7 +821,7 @@ static int _set_socket_boost_limit(int socket_id, u32 boost_limit)
 	return hsmp_send_message(socket_id, &msg);
 }
 
-int hsmp_set_socket_boost_limit(int socket_id, u32 boost_limit)
+int hsmp_set_socket_boost_limit(int socket_id, uint32_t boost_limit)
 {
 	int err;
 
@@ -832,7 +832,7 @@ int hsmp_set_socket_boost_limit(int socket_id, u32 boost_limit)
 	return _set_socket_boost_limit(socket_id, boost_limit);
 }
 
-int hsmp_set_system_boost_limit(u32 boost_limit)
+int hsmp_set_system_boost_limit(uint32_t boost_limit)
 {
 	int socket_id;
 	int err;
@@ -853,7 +853,7 @@ int hsmp_set_system_boost_limit(u32 boost_limit)
 	return err;
 }
 
-int hsmp_cpu_boost_limit(int cpu, u32 *boost_limit)
+int hsmp_cpu_boost_limit(int cpu, uint32_t *boost_limit)
 {
 	struct hsmp_message msg = { 0 };
 	int socket_id;
@@ -1044,7 +1044,7 @@ int hsmp_memory_clock(int socket_id, int *mem_clock)
 	return hsmp_fabric_clocks(socket_id, NULL, mem_clock);
 }
 
-int hsmp_core_clock_max_frequency(int socket_id, u32 *max_freq)
+int hsmp_core_clock_max_frequency(int socket_id, uint32_t *max_freq)
 {
 	struct hsmp_message msg = { 0 };
 	int err;
@@ -1069,7 +1069,7 @@ int hsmp_core_clock_max_frequency(int socket_id, u32 *max_freq)
 	return 0;
 }
 
-int hsmp_c0_residency(int socket_id, u32 *residency)
+int hsmp_c0_residency(int socket_id, uint32_t *residency)
 {
 	struct hsmp_message msg = { 0 };
 	int err;
@@ -1169,11 +1169,11 @@ int hsmp_next_bus(int idx, u8 *bus_num)
 	return idx + 1;
 }
 
-int hsmp_ddr_bandwidths(int socket_id, u32 *max_bw,
-			u32 *utilized_bw, u32 *utilized_pct)
+int hsmp_ddr_bandwidths(int socket_id, uint32_t *max_bw,
+			uint32_t *utilized_bw, uint32_t *utilized_pct)
 {
 	struct hsmp_message msg = { 0 };
-	u32 result;
+	uint32_t result;
 	int err;
 
 	err = hsmp_enter(HSMP_GET_DDR_BANDWIDTH);
@@ -1206,17 +1206,17 @@ int hsmp_ddr_bandwidths(int socket_id, u32 *max_bw,
 	return 0;
 }
 
-int hsmp_ddr_max_bandwidth(int socket_id, u32 *max_bw)
+int hsmp_ddr_max_bandwidth(int socket_id, uint32_t *max_bw)
 {
 	return hsmp_ddr_bandwidths(socket_id, max_bw, NULL, NULL);
 }
 
-int hsmp_ddr_utilized_bandwidth(int socket_id, u32 *utilized_bw)
+int hsmp_ddr_utilized_bandwidth(int socket_id, uint32_t *utilized_bw)
 {
 	return hsmp_ddr_bandwidths(socket_id, NULL, utilized_bw, NULL);
 }
 
-int hsmp_ddr_utilized_percent(int socket_id, u32 *utilized_pct)
+int hsmp_ddr_utilized_percent(int socket_id, uint32_t *utilized_pct)
 {
 	return hsmp_ddr_bandwidths(socket_id, NULL, NULL, utilized_pct);
 }

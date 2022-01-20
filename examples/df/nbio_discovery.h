@@ -31,7 +31,7 @@ struct pci_dev *socket_id_to_dev(int socket_id);
  * Read a register in SMN space through PCI config space indirect access.
  * Returns zero for success, negative error code for failure.
  */
-int smn_pci_read(struct pci_dev *root, u32 reg_addr, u32 *reg_data);
+int smn_pci_read(struct pci_dev *root, uint32_t reg_addr, uint32_t *reg_data);
 
 /*
  * Takes a PCI-e bus number and returns the index into the NBIOs array

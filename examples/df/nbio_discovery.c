@@ -82,7 +82,7 @@ struct pci_dev *socket_id_to_dev(int socket_id)
 #define SMN_INDEX_REG	0x60  /* Offsets in PCI config space */
 #define SMN_DATA_REG	0x64
 
-int smn_pci_read(struct pci_dev *root, u32 reg_addr, u32 *reg_data)
+int smn_pci_read(struct pci_dev *root, uint32_t reg_addr, uint32_t *reg_data)
 {
 	if (!root || !reg_data)
 		return -EINVAL;
@@ -194,7 +194,7 @@ int setup_nbios(int *num_sockets)
 	/* Finally get IOHC ID for each bus base */
 	for (i = 0; i < num_nbios; i++) {
 		int idx;
-		u32 addr, val;
+		uint32_t addr, val;
 
 		addr = SMN_IOHCMISC0_NB_BUS_NUM_CNTL + (i & 0x3) * SMN_IOHCMISC_OFFSET;
 		err = smn_pci_read(nbios[i].dev, addr, &val);

@@ -37,7 +37,7 @@ int hsmp_interface_version(int *version);
  * Get the average power consumption (in milliwatts) for the
  * specified socket.
  */
-int hsmp_socket_power(int socket_id, u32 *power);
+int hsmp_socket_power(int socket_id, uint32_t *power);
 
 /*
  * Set the power consumption limit (in milliwatts) for
@@ -48,19 +48,19 @@ int hsmp_socket_power(int socket_id, u32 *power);
  * processor can operate at, no further power socket reduction occurs if
  * the limit is set below that minimum.
  */
-int hsmp_set_socket_power_limit(int socket_id, u32 power_limit);
+int hsmp_set_socket_power_limit(int socket_id, uint32_t power_limit);
 
 /*
  * Get the current power consumption limit (in milliwatts) for
  * the specified socket.
  */
-int hsmp_socket_power_limit(int socket_id, u32 *power_limit);
+int hsmp_socket_power_limit(int socket_id, uint32_t *power_limit);
 
 /*
  * Get the maximum socket power consumption limit that can be set
  * for the specified socket.
  */
-int hsmp_socket_max_power_limit(int socket_id, u32 *max_power);
+int hsmp_socket_max_power_limit(int socket_id, uint32_t *max_power);
 
 /*
  * Note on boost limits.
@@ -93,16 +93,16 @@ int hsmp_socket_max_power_limit(int socket_id, u32 *max_power);
  */
 
 /* Set HSMP Boost Limit for the specified core. */
-int hsmp_set_cpu_boost_limit(int cpu, u32 boost_limit);
+int hsmp_set_cpu_boost_limit(int cpu, uint32_t boost_limit);
 
 /* Set HSMP Boost Limit for all cores in the specified socket. */
-int hsmp_set_socket_boost_limit(int socket_id, u32 boost_limit);
+int hsmp_set_socket_boost_limit(int socket_id, uint32_t boost_limit);
 
 /* Set HSMP Boost Limit for the system. */
-int hsmp_set_system_boost_limit(u32 boost_limit);
+int hsmp_set_system_boost_limit(uint32_t boost_limit);
 
 /* Get the HSMP Boost Limit for the specified core. */
-int hsmp_cpu_boost_limit(int cpu, u32 *boost_limit);
+int hsmp_cpu_boost_limit(int cpu, uint32_t *boost_limit);
 
 /*
  * Get normalized status of the specified CPUs PROC_HOT status.
@@ -170,14 +170,14 @@ int hsmp_memory_clock(int socket_id, int *mem_clock);
  * Get the maximum core clock (in MHZ) allowed by the most restrictive
  * limit at the time of the call.
  */
-int hsmp_core_clock_max_frequency(int socket_id, u32 *max_freq);
+int hsmp_core_clock_max_frequency(int socket_id, uint32_t *max_freq);
 
 /*
  * Get the C0 residency percentage for all cores in the specified
  * socket. Residency is returned as an integer between 0 - 100, where
  * 100 specifies that all enabled cores in the socket are running in C0.
  */
-int hsmp_c0_residency(int socket_id, u32 *residency);
+int hsmp_c0_residency(int socket_id, uint32_t *residency);
 
 /*
  * The NBIO (PCI-e interface) P-state selection can be specified as
@@ -224,15 +224,15 @@ int hsmp_next_bus(int idx, u8 *bus_num);
  * DDR bandwidth (read + write) in GB/s, and the current utilized DDR bandwidth
  * as a percentage of the theoretical maximum for the specified socket.
  */
-int hsmp_ddr_bandwidths(int socket_id, u32 *max_bw, u32 *utilized_bw,
-			u32 *utilized_pct);
+int hsmp_ddr_bandwidths(int socket_id, uint32_t *max_bw, uint32_t *utilized_bw,
+			uint32_t *utilized_pct);
 
 /*
  * Get the theoretical maximum DDR bandwidth in GB/s for the specified socket.
  *
  * Only available on systems with hsmp interface version >= 3.
  */
-int hsmp_ddr_max_bandwidth(int socket_id, u32 *max_bw);
+int hsmp_ddr_max_bandwidth(int socket_id, uint32_t *max_bw);
 
 /*
  * Get the current utilized DDR bandwidth (read + write) in GB/s for
@@ -240,7 +240,7 @@ int hsmp_ddr_max_bandwidth(int socket_id, u32 *max_bw);
  *
  * Only available on systems with hsmp interface version >= 3.
  */
-int hsmp_ddr_utilized_bandwidth(int socket_id, u32 *utilized_bw);
+int hsmp_ddr_utilized_bandwidth(int socket_id, uint32_t *utilized_bw);
 
 /*
  * Get the current utilized DDR bandwidth as a percentage of the
@@ -248,6 +248,6 @@ int hsmp_ddr_utilized_bandwidth(int socket_id, u32 *utilized_bw);
  *
  * Only available on systems with hsmp interface version >= 3.
  */
-int hsmp_ddr_utilized_percent(int socket_id, u32 *utilized_pct);
+int hsmp_ddr_utilized_percent(int socket_id, uint32_t *utilized_pct);
 
 #endif

@@ -16,9 +16,9 @@
 #define SMN_IOHCMISC0_NB_BUS_NUM_CNTL	0x13B10044	/* Address in SMN space */
 #define SMN_IOHCMISC_OFFSET		0x00100000	/* Offset for MISC[1..3] */
 
-int smn_read(struct pci_dev *root, u32 reg_addr, u32 *reg_data);
+int smn_read(struct pci_dev *root, uint32_t reg_addr, uint32_t *reg_data);
 
-int hsmp_read(struct pci_dev *root, u32 reg_addr, u32 *reg_data);
-int hsmp_write(struct pci_dev *root, u32 reg_addr, u32 reg_data);
+int hsmp_read(struct pci_dev *root, uint32_t reg_addr, uint32_t *reg_data);
+int hsmp_write(struct pci_dev *root, uint32_t reg_addr, uint32_t reg_data);
 
 #endif

@@ -203,7 +203,7 @@ static inline void process_args(int argc, char **argv)
 static inline int f17f19_get_xgmi2_width(void)
 {
 	int err;
-	u32 val;
+	uint32_t val;
 	struct pci_dev *root;
 
 	root = socket_id_to_dev(0);
@@ -241,7 +241,7 @@ static inline int f17f19_get_xgmi2_width(void)
 static inline int f17f19_get_xgmi2_speed(void)
 {
 	int err;
-	u32 freqcnt, refclksel;
+	uint32_t freqcnt, refclksel;
 	struct pci_dev *root;
 
 	root = socket_id_to_dev(0);

@@ -95,7 +95,7 @@ void cleanup_nbios(void)
 int setup_nbios(void)
 {
 	struct pci_dev *dev;
-	u8 base;
+	uint8_t base;
 	int i;
 
 	clear_nbio_table();
@@ -165,7 +165,7 @@ int setup_nbios(void)
 	/* Finally get IOHC ID for each bus base */
 	for (i = 0; i < num_nbios; i++) {
 		struct nbio_dev *nbio;
-		u32 addr, val;
+		uint32_t addr, val;
 		int err;
 
 		addr = SMN_IOHCMISC0_NB_BUS_NUM_CNTL + (i & 0x3) * SMN_IOHCMISC_OFFSET;

@@ -281,7 +281,7 @@ void test_interface_version(void)
 
 void test_hsmp_ddr(void)
 {
-	u32 bw, u_bw, pct_bw;
+	uint32_t bw, u_bw, pct_bw;
 	int rc;
 
 	if (interface_version < 3)
@@ -361,7 +361,7 @@ void test_hsmp_ddr(void)
 
 void test_hsmp_boost_limit(void)
 {
-	u32 set_limit, limit;
+	uint32_t set_limit, limit;
 	int rc;
 
 	printf("Testing hsmp_set_cpu_boost_limit()...\n");
@@ -483,8 +483,8 @@ void test_hsmp_xgmi(void)
 
 void test_hsmp_socket_power(void)
 {
-	u32 power;
-	u32 limit;
+	uint32_t power;
+	uint32_t limit;
 	int rc;
 
 	printf("Testing hsmp_socket_power()...\n");
@@ -691,7 +691,7 @@ void test_fabric_clocks(void)
 
 void test_core_clock_max(void)
 {
-	u32 clock;
+	uint32_t clock;
 	int rc;
 
 	printf("Testing hsmp_core_clock_max_frequency()...\n");
@@ -714,7 +714,7 @@ void test_core_clock_max(void)
 
 void test_c0_residency(void)
 {
-	u32 residency;
+	uint32_t residency;
 	int rc;
 
 	printf("Testing hsmp_c0_residency()...\n");

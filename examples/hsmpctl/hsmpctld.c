@@ -58,8 +58,8 @@ static void hsmpctld_get_version(struct hsmp_msg *msg)
 
 static void hsmpctld_socket_power(struct hsmp_msg *msg)
 {
+	uint32_t power;
 	int socket;
-	u32 power;
 	int err;
 
 	if (!valid_num_args(msg, 1))
@@ -80,8 +80,8 @@ static void hsmpctld_socket_power(struct hsmp_msg *msg)
 
 static void hsmpctld_socket_power_limit(struct hsmp_msg *msg)
 {
+	uint32_t power;
 	int socket;
-	u32 power;
 	int err;
 
 	if (!valid_num_args(msg, 1))
@@ -102,8 +102,8 @@ static void hsmpctld_socket_power_limit(struct hsmp_msg *msg)
 
 static void hsmpctld_set_socket_power_limit(struct hsmp_msg *msg)
 {
+	uint32_t power;
 	int socket;
-	u32 power;
 	int err;
 
 	if (!valid_num_args(msg, 2))
@@ -121,8 +121,8 @@ static void hsmpctld_set_socket_power_limit(struct hsmp_msg *msg)
 
 static void hsmpctld_socket_power_max(struct hsmp_msg *msg)
 {
+	uint32_t power;
 	int socket;
-	u32 power;
 	int err;
 
 	if (!valid_num_args(msg, 1))
@@ -197,7 +197,7 @@ static void hsmpctld_set_system_boost_limit(struct hsmp_msg *msg)
 
 static void hsmpctld_cpu_boost_limit(struct hsmp_msg *msg)
 {
-	u32 boost_limit;
+	uint32_t boost_limit;
 	int cpu;
 	int err;
 
@@ -307,7 +307,7 @@ static void hsmpctld_fabric_clocks(struct hsmp_msg *msg)
 
 static void hsmpctld_core_clock_max(struct hsmp_msg *msg)
 {
-	u32 frequency;
+	uint32_t frequency;
 	int socket;
 	int err;
 
@@ -328,7 +328,7 @@ static void hsmpctld_core_clock_max(struct hsmp_msg *msg)
 
 static void hsmpctld_c0_residency(struct hsmp_msg *msg)
 {
-	u32 residency;
+	uint32_t residency;
 	int socket;
 	int err;
 
@@ -418,7 +418,7 @@ static void hsmpctld_nbio_next_bus(struct hsmp_msg *msg)
 
 static void hsmpctld_ddr_bw(struct hsmp_msg *msg)
 {
-	u32 max, utilized, percent;
+	uint32_t max, utilized, percent;
 	int socket;
 	int err;
 

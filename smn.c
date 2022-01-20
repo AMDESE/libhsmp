@@ -19,8 +19,8 @@
 #endif
 
 struct smn_pci_port {
-	u32 index_reg;  /* PCI-e index register for SMN access */
-	u32 data_reg;   /* PCI-e data register for SMN access */
+	uint32_t index_reg;  /* PCI-e index register for SMN access */
+	uint32_t data_reg;   /* PCI-e data register for SMN access */
 };
 
 static struct smn_pci_port smn_port = {
@@ -49,8 +49,8 @@ static struct smn_pci_port hsmp_port = {
  * index register. Step two is to read or write the appropriate aperture data
  * register.
  */
-static int smn_pci_rdwr(struct pci_dev *root, u32 reg_addr,
-			u32 *reg_data, struct smn_pci_port *port, int rdwr)
+static int smn_pci_rdwr(struct pci_dev *root, uint32_t reg_addr,
+			uint32_t *reg_data, struct smn_pci_port *port, int rdwr)
 {
 	pr_debug_pci("pci_write_long dev 0x%p, addr 0x%08X, data 0x%08X\n",
 		     root, port->index_reg, reg_addr);
@@ -69,17 +69,17 @@ static int smn_pci_rdwr(struct pci_dev *root, u32 reg_addr,
 	return 0;
 }
 
-int smn_read(struct pci_dev *root, u32 reg_addr, u32 *reg_data)
+int smn_read(struct pci_dev *root, uint32_t reg_addr, uint32_t *reg_data)
 {
 	return smn_pci_rdwr(root, reg_addr, reg_data, &smn_port, SMN_READ);
 }
 
-int hsmp_read(struct pci_dev *root, u32 reg_addr, u32 *reg_data)
+int hsmp_read(struct pci_dev *root, uint32_t reg_addr, uint32_t *reg_data)
 {
 	return smn_pci_rdwr(root, reg_addr, reg_data, &hsmp_port, SMN_READ);
 }
 
-int hsmp_write(struct pci_dev *root, u32 reg_addr, u32 reg_data)
+int hsmp_write(struct pci_dev *root, uint32_t reg_addr, uint32_t reg_data)
 {
 	return smn_pci_rdwr(root, reg_addr, &reg_data, &hsmp_port, SMN_WRITE);
 }
