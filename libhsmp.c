@@ -25,6 +25,7 @@
 #include <sys/stat.h>
 
 #include "libhsmp.h"
+#include "smn.h"
 
 #ifdef DEBUG_HSMP
 #define pr_debug(...)   printf("[libhsmp] " __VA_ARGS__)
@@ -37,21 +38,6 @@
 #else
 #define pr_debug_pci(...)	((void)0)
 #endif
-
-struct smn_pci_port {
-	u32 index_reg;  /* PCI-e index register for SMN access */
-	u32 data_reg;   /* PCI-e data register for SMN access */
-};
-
-static struct smn_pci_port smn_port = {
-	.index_reg = 0x60,
-	.data_reg  = 0x64,
-};
-
-static struct smn_pci_port hsmp_port = {
-	.index_reg = 0xC4,
-	.data_reg  = 0xC8,
-};
 
 #define HSMP_MSG_REG	0x3B10534
 #define HSMP_STATUS_REG	0x3B10980
@@ -196,49 +182,6 @@ static bool msg_id_supported(enum hsmp_msg_t msg_id)
 
 #define PCI_VENDOR_ID_AMD		0x1022
 #define F17F19_IOHC_DEVID		0x1480
-#define SMN_IOHCMISC0_NB_BUS_NUM_CNTL	0x13B10044  /* Address in SMN space */
-#define SMN_IOHCMISC_OFFSET		0x00100000  /* Offset for MISC[1..3] */
-
-/*
- * SMN access functions
- * Returns 0 on success, negative error code on failure. The return status
- * is for the SMN access, not the result of the intended SMN or HSMP operation.
- *
- * SMN PCI config space access method
- * There are two access apertures defined in the PCI-e config space for the
- * North Bridge, one for general purpose SMN register reads/writes and a second
- * aperture specific for HSMP messages and responses. For both reads and writes,
- * step one is to write the register to be accessed to the appropriate aperture
- * index register. Step two is to read or write the appropriate aperture data
- * register.
- */
-static int smn_pci_write(struct pci_dev *root, u32 reg_addr,
-			 u32 reg_data, struct smn_pci_port *port)
-{
-	pr_debug_pci("pci_write_long dev 0x%p, addr 0x%08X, data 0x%08X\n",
-		     root, port->index_reg, reg_addr);
-	pci_write_long(root, port->index_reg, reg_addr);
-
-	pr_debug_pci("pci_write_long dev 0x%p, addr 0x%08X, data 0x%08X\n",
-		     root, port->index_reg, reg_addr);
-	pci_write_long(root, port->data_reg, reg_data);
-
-	return 0;
-}
-
-static int smn_pci_read(struct pci_dev *root, u32 reg_addr,
-			u32 *reg_data, struct smn_pci_port *port)
-{
-	pr_debug_pci("pci_write_long dev 0x%p, addr 0x%08X, data 0x%08X\n",
-		     root, port->index_reg, reg_addr);
-	pci_write_long(root, port->index_reg, reg_addr);
-
-	*reg_data = pci_read_long(root, port->data_reg);
-	pr_debug_pci("pci_read_long  dev 0x%p, addr 0x%08X, data 0x%08X\n",
-		     root, port->data_reg, *reg_data);
-
-	return 0;
-}
 
 /*
  * Return the PCI device pointer for the IOHC dev hosting the lowest numbered
@@ -298,7 +241,7 @@ static int _hsmp_send_message(struct pci_dev *root_dev, struct hsmp_message *msg
 
 	/* Zero the status register */
 	mbox_status = HSMP_STATUS_NOT_READY;
-	err = smn_pci_write(root_dev, HSMP_STATUS_REG, mbox_status, &hsmp_port);
+	err = hsmp_write(root_dev, HSMP_STATUS_REG, mbox_status);
 	if (err) {
 		pr_debug("Error %d clearing HSMP mailbox status register\n", err);
 		return err;
@@ -306,8 +249,8 @@ static int _hsmp_send_message(struct pci_dev *root_dev, struct hsmp_message *msg
 
 	/* Write any message arguments */
 	for (arg_num = 0; arg_num < msg->num_args; arg_num++) {
-		err = smn_pci_write(root_dev, HSMP_DATA_REG + (arg_num << 2),
-				    msg->args[arg_num], &hsmp_port);
+		err = hsmp_write(root_dev, HSMP_DATA_REG + (arg_num << 2),
+				 msg->args[arg_num]);
 		if (err) {
 			pr_debug("Error %d writing HSMP message argument %d\n",
 				 err, arg_num);
@@ -316,7 +259,7 @@ static int _hsmp_send_message(struct pci_dev *root_dev, struct hsmp_message *msg
 	}
 
 	/* Write the message ID which starts the operation */
-	err = smn_pci_write(root_dev, HSMP_MSG_REG, msg->msg_num, &hsmp_port);
+	err = hsmp_write(root_dev, HSMP_MSG_REG, msg->msg_num);
 	if (err) {
 		pr_debug("Error %d writing HSMP message ID %u\n", err, msg->msg_num);
 		return err;
@@ -331,7 +274,7 @@ static int _hsmp_send_message(struct pci_dev *root_dev, struct hsmp_message *msg
 	 */
 retry:
 	nanosleep(&one_ms, NULL);
-	err = smn_pci_read(root_dev, HSMP_STATUS_REG, &mbox_status, &hsmp_port);
+	err = hsmp_read(root_dev, HSMP_STATUS_REG, &mbox_status);
 	if (err) {
 		pr_debug("HSMP message ID %u - error %d reading mailbox status\n",
 			 err, msg->msg_num);
@@ -367,8 +310,8 @@ retry:
 
 	/* SMN has responded OK. Read response data */
 	for (arg_num = 0; arg_num < msg->response_sz; arg_num++) {
-		err = smn_pci_read(root_dev, HSMP_DATA_REG + (arg_num << 2),
-				   &msg->response[arg_num], &hsmp_port);
+		err = hsmp_read(root_dev, HSMP_DATA_REG + (arg_num << 2),
+				&msg->response[arg_num]);
 		if (err) {
 			pr_debug("Error %d reading HSMP response %u for message ID %u\n",
 				 err, arg_num, msg->msg_num);
@@ -409,12 +352,6 @@ static int hsmp_send_message(int socket_id, struct hsmp_message *msg)
 	hsmp_unlock();
 
 	return err;
-}
-
-/* Read a register in SMN address space */
-static int smn_read(struct pci_dev *root, u32 addr, u32 *val)
-{
-	return smn_pci_read(root, addr, val, &smn_port);
 }
 
 /*

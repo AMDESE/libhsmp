@@ -25,6 +25,7 @@
 #endif
 
 #ifdef BUILD_STATIC
+#include "smn.c"
 #include "libhsmp.c"
 #endif
 

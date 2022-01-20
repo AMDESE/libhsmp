@@ -23,7 +23,7 @@ AM_CFLAGS += -DHSMP_FAMILY_0x17
 endif
 
 lib_LTLIBRARIES = libhsmp.la
-libhsmp_la_SOURCES = libhsmp.c
+libhsmp_la_SOURCES = libhsmp.c smn.c
 
 libhsmp_la_LDFLAGS = -version-info 1:1:0
 
