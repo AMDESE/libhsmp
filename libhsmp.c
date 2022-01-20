@@ -38,17 +38,25 @@
 #define pr_debug_pci(...)	((void)0)
 #endif
 
-static struct smn_port {
+struct smn_pci_port {
 	u32 index_reg;  /* PCI-e index register for SMN access */
 	u32 data_reg;   /* PCI-e data register for SMN access */
-} smn, hsmp;
+};
 
-static struct {
-	u32 mbox_msg_id;    /* SMN register for HSMP message ID */
-	u32 mbox_status;    /* SMN register for HSMP status word */
-	u32 mbox_data;      /* SMN base for message argument(s) */
-	u32 mbox_timeout;   /* Timeout in MS to consider the SMN hung */
-} hsmp_access;
+static struct smn_pci_port smn_port = {
+	.index_reg = 0x60,
+	.data_reg  = 0x64,
+};
+
+static struct smn_pci_port hsmp_port = {
+	.index_reg = 0xC4,
+	.data_reg  = 0xC8,
+};
+
+#define HSMP_MSG_REG	0x3B10534
+#define HSMP_STATUS_REG	0x3B10980
+#define HSMP_DATA_REG	0x3B109E0
+#define HSMP_TIMEOUT	500
 
 /*
  * Message types
@@ -205,7 +213,7 @@ static bool msg_id_supported(enum hsmp_msg_t msg_id)
  * register.
  */
 static int smn_pci_write(struct pci_dev *root, u32 reg_addr,
-			 u32 reg_data, struct smn_port *port)
+			 u32 reg_data, struct smn_pci_port *port)
 {
 	pr_debug_pci("pci_write_long dev 0x%p, addr 0x%08X, data 0x%08X\n",
 		     root, port->index_reg, reg_addr);
@@ -219,7 +227,7 @@ static int smn_pci_write(struct pci_dev *root, u32 reg_addr,
 }
 
 static int smn_pci_read(struct pci_dev *root, u32 reg_addr,
-			u32 *reg_data, struct smn_port *port)
+			u32 *reg_data, struct smn_pci_port *port)
 {
 	pr_debug_pci("pci_write_long dev 0x%p, addr 0x%08X, data 0x%08X\n",
 		     root, port->index_reg, reg_addr);
@@ -290,7 +298,7 @@ static int _hsmp_send_message(struct pci_dev *root_dev, struct hsmp_message *msg
 
 	/* Zero the status register */
 	mbox_status = HSMP_STATUS_NOT_READY;
-	err = smn_pci_write(root_dev, hsmp_access.mbox_status, mbox_status, &hsmp);
+	err = smn_pci_write(root_dev, HSMP_STATUS_REG, mbox_status, &hsmp_port);
 	if (err) {
 		pr_debug("Error %d clearing HSMP mailbox status register\n", err);
 		return err;
@@ -298,8 +306,8 @@ static int _hsmp_send_message(struct pci_dev *root_dev, struct hsmp_message *msg
 
 	/* Write any message arguments */
 	for (arg_num = 0; arg_num < msg->num_args; arg_num++) {
-		err = smn_pci_write(root_dev, hsmp_access.mbox_data + (arg_num << 2),
-				    msg->args[arg_num], &hsmp);
+		err = smn_pci_write(root_dev, HSMP_DATA_REG + (arg_num << 2),
+				    msg->args[arg_num], &hsmp_port);
 		if (err) {
 			pr_debug("Error %d writing HSMP message argument %d\n",
 				 err, arg_num);
@@ -308,13 +316,13 @@ static int _hsmp_send_message(struct pci_dev *root_dev, struct hsmp_message *msg
 	}
 
 	/* Write the message ID which starts the operation */
-	err = smn_pci_write(root_dev, hsmp_access.mbox_msg_id, msg->msg_num, &hsmp);
+	err = smn_pci_write(root_dev, HSMP_MSG_REG, msg->msg_num, &hsmp_port);
 	if (err) {
 		pr_debug("Error %d writing HSMP message ID %u\n", err, msg->msg_num);
 		return err;
 	}
 
-	timeout = hsmp_access.mbox_timeout;
+	timeout = HSMP_TIMEOUT;
 
 	/*
 	 * Assume it takes at least one SMN FW cycle (1 MS) to complete
@@ -323,7 +331,7 @@ static int _hsmp_send_message(struct pci_dev *root_dev, struct hsmp_message *msg
 	 */
 retry:
 	nanosleep(&one_ms, NULL);
-	err = smn_pci_read(root_dev, hsmp_access.mbox_status, &mbox_status, &hsmp);
+	err = smn_pci_read(root_dev, HSMP_STATUS_REG, &mbox_status, &hsmp_port);
 	if (err) {
 		pr_debug("HSMP message ID %u - error %d reading mailbox status\n",
 			 err, msg->msg_num);
@@ -359,8 +367,8 @@ retry:
 
 	/* SMN has responded OK. Read response data */
 	for (arg_num = 0; arg_num < msg->response_sz; arg_num++) {
-		err = smn_pci_read(root_dev, hsmp_access.mbox_data + (arg_num << 2),
-				   &msg->response[arg_num], &hsmp);
+		err = smn_pci_read(root_dev, HSMP_DATA_REG + (arg_num << 2),
+				   &msg->response[arg_num], &hsmp_port);
 		if (err) {
 			pr_debug("Error %d reading HSMP response %u for message ID %u\n",
 				 err, arg_num, msg->msg_num);
@@ -406,7 +414,7 @@ static int hsmp_send_message(int socket_id, struct hsmp_message *msg)
 /* Read a register in SMN address space */
 static int smn_read(struct pci_dev *root, u32 addr, u32 *val)
 {
-	return smn_pci_read(root, addr, val, &smn);
+	return smn_pci_read(root, addr, val, &smn_port);
 }
 
 /*
@@ -836,19 +844,6 @@ static int hsmp_init(void)
 
 	/* Set supported HSMP interface version */
 	hsmp_data.supported_intf = SMN_INTF_SUPPORTED;
-
-	/* Offsets in PCIe config space for 0x1480 DevID (IOHC) */
-	smn.index_reg  = 0x60;
-	smn.data_reg   = 0x64;
-	hsmp.index_reg = 0xC4;
-	hsmp.data_reg  = 0xC8;
-
-	/* Offsets in SMN address space */
-	hsmp_access.mbox_msg_id  = 0x3B10534;
-	hsmp_access.mbox_status  = 0x3B10980;
-	hsmp_access.mbox_data    = 0x3B109E0;
-
-	hsmp_access.mbox_timeout = 500;
 
 	err = hsmp_setup_nbios();
 	if (err)
