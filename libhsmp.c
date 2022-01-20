@@ -23,6 +23,7 @@
 #include <sys/file.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/sysinfo.h>
 
 #include "libhsmp.h"
 #include "smn.h"
@@ -110,10 +111,9 @@ struct cpu_dev {
 	int	apicid;
 };
 
-#define MAX_CPUS	256
-
 static struct {
-	struct cpu_dev		cpus[MAX_CPUS];
+	struct cpu_dev		*cpus;
+	int			num_cpus;
 	union smu_fw_ver	smu_firmware;		/* SMU firmware version code */
 	unsigned int		smu_intf_ver;		/* HSMP implementation level */
 	unsigned int		supported_intf;		/* SMU interface version supported */
@@ -327,7 +327,7 @@ static int hsmp_send_message(int socket_id, struct hsmp_message *msg)
 
 static int cpu_apicid(int cpu)
 {
-	if (cpu > MAX_CPUS) {
+	if (cpu > hsmp_data.num_cpus) {
 		errno = EINVAL;
 		return -1;
 	}
@@ -342,7 +342,7 @@ static int cpu_apicid(int cpu)
 
 static int cpu_socket_id(int cpu)
 {
-	if (cpu > MAX_CPUS) {
+	if (cpu > hsmp_data.num_cpus) {
 		errno = EINVAL;
 		return -1;
 	}
@@ -529,6 +529,16 @@ static int hsmp_get_cpu_data(void)
 	int read;
 	int err;
 
+	hsmp_data.num_cpus = get_nprocs();
+
+	hsmp_data.cpus = calloc(sizeof(struct cpu_dev), hsmp_data.num_cpus);
+	if (!hsmp_data.cpus) {
+		pr_debug("Failed to allocate CPUs array\n");
+		return -1;
+	}
+
+	memset(hsmp_data.cpus, 0, sizeof(struct cpu_dev) * hsmp_data.num_cpus);
+
 	fp = fopen("/proc/cpuinfo", "r");
 	if (!fp) {
 		pr_debug("Failed to open \"/proc/cpuinfo\"\n");
@@ -542,8 +552,11 @@ static int hsmp_get_cpu_data(void)
 			int cpu_id;
 
 			cpu_id = read_id(line);
-			if (cpu_id >= MAX_CPUS)
+			if (cpu_id >= hsmp_data.num_cpus) {
+				pr_debug("Found unexpected CPU %d (num_cpus %d)\n",
+					 cpu_id, hsmp_data.num_cpus);
 				break;
+			}
 
 			/* goto 'physical id' */
 			while ((read = getline(&line, &len, fp)) != -1) {
@@ -645,6 +658,9 @@ static int hsmp_enter(enum hsmp_msg_t msg_id)
 
 static void hsmp_fini(void)
 {
+	if (hsmp_data.cpus)
+		free(hsmp_data.cpus);
+
 	cleanup_nbios();
 }
 
