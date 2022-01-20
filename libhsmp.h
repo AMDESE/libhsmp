@@ -66,7 +66,7 @@ int hsmp_socket_max_power_limit(int socket_id, u32 *max_power);
  * Note on boost limits.
  *
  * For every core, the System Management Unit maintains several different
- * limits on core frequency. Because limits are maintained by the SMU and
+ * limits on core frequency. Because limits are maintained by the SMN and
  * not by cores themselves, limits can be set and read regardless of the
  * core hotplug state. This also means when using hotplug to bring a core
  * back online, any previous limits at a core or socket level will remain

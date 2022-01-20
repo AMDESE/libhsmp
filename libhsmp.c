@@ -38,16 +38,16 @@
 #define pr_debug_pci(...)	((void)0)
 #endif
 
-static struct smu_port {
-	u32 index_reg;  /* PCI-e index register for SMU access */
-	u32 data_reg;   /* PCI-e data register for SMU access */
-} smu, hsmp;
+static struct smn_port {
+	u32 index_reg;  /* PCI-e index register for SMN access */
+	u32 data_reg;   /* PCI-e data register for SMN access */
+} smn, hsmp;
 
 static struct {
-	u32 mbox_msg_id;    /* SMU register for HSMP message ID */
-	u32 mbox_status;    /* SMU register for HSMP status word */
-	u32 mbox_data;      /* SMU base for message argument(s) */
-	u32 mbox_timeout;   /* Timeout in MS to consider the SMU hung */
+	u32 mbox_msg_id;    /* SMN register for HSMP message ID */
+	u32 mbox_status;    /* SMN register for HSMP status word */
+	u32 mbox_data;      /* SMN base for message argument(s) */
+	u32 mbox_timeout;   /* Timeout in MS to consider the SMN hung */
 } hsmp_access;
 
 /*
@@ -87,7 +87,7 @@ enum hsmp_msg_t {
  * NOTE: This should be updated when support for new HSMP
  * interface versions is added.
  */
-#define SMU_INTF_SUPPORTED	3
+#define SMN_INTF_SUPPORTED	3
 
 static enum hsmp_msg_t intf_support[] = {
 	0,
@@ -132,7 +132,7 @@ static struct {
 	struct cpu_dev		cpus[MAX_CPUS];
 	union smu_fw_ver	smu_firmware;		/* SMU firmware version code */
 	unsigned int		smu_intf_ver;		/* HSMP implementation level */
-	unsigned int		supported_intf;		/* SMU interface v ersion supported */
+	unsigned int		supported_intf;		/* SMU interface version supported */
 	unsigned int		x86_family;		/* Family number */
 	int			initialized;
 	int			lock_fd;
@@ -192,20 +192,20 @@ static bool msg_id_supported(enum hsmp_msg_t msg_id)
 #define SMN_IOHCMISC_OFFSET		0x00100000  /* Offset for MISC[1..3] */
 
 /*
- * SMU access functions
+ * SMN access functions
  * Returns 0 on success, negative error code on failure. The return status
- * is for the SMU access, not the result of the intended SMU or HSMP operation.
+ * is for the SMN access, not the result of the intended SMN or HSMP operation.
  *
- * SMU PCI config space access method
+ * SMN PCI config space access method
  * There are two access apertures defined in the PCI-e config space for the
- * North Bridge, one for general purpose SMU register reads/writes and a second
+ * North Bridge, one for general purpose SMN register reads/writes and a second
  * aperture specific for HSMP messages and responses. For both reads and writes,
  * step one is to write the register to be accessed to the appropriate aperture
  * index register. Step two is to read or write the appropriate aperture data
  * register.
  */
-static int smu_pci_write(struct pci_dev *root, u32 reg_addr,
-			 u32 reg_data, struct smu_port *port)
+static int smn_pci_write(struct pci_dev *root, u32 reg_addr,
+			 u32 reg_data, struct smn_port *port)
 {
 	pr_debug_pci("pci_write_long dev 0x%p, addr 0x%08X, data 0x%08X\n",
 		     root, port->index_reg, reg_addr);
@@ -218,8 +218,8 @@ static int smu_pci_write(struct pci_dev *root, u32 reg_addr,
 	return 0;
 }
 
-static int smu_pci_read(struct pci_dev *root, u32 reg_addr,
-			u32 *reg_data, struct smu_port *port)
+static int smn_pci_read(struct pci_dev *root, u32 reg_addr,
+			u32 *reg_data, struct smn_port *port)
 {
 	pr_debug_pci("pci_write_long dev 0x%p, addr 0x%08X, data 0x%08X\n",
 		     root, port->index_reg, reg_addr);
@@ -275,7 +275,7 @@ static void hsmp_unlock(void)
 }
 
 /*
- * Send a message to the SMU access port via PCI-e config space registers.
+ * Send a message to the SMN access port via PCI-e config space registers.
  * The caller is expected to zero out any unused arguments. If a response
  * is expected, the number of response words should be greater than 0.
  * Returns 0 for success and populates the requested number of arguments
@@ -290,7 +290,7 @@ static int _hsmp_send_message(struct pci_dev *root_dev, struct hsmp_message *msg
 
 	/* Zero the status register */
 	mbox_status = HSMP_STATUS_NOT_READY;
-	err = smu_pci_write(root_dev, hsmp_access.mbox_status, mbox_status, &hsmp);
+	err = smn_pci_write(root_dev, hsmp_access.mbox_status, mbox_status, &hsmp);
 	if (err) {
 		pr_debug("Error %d clearing HSMP mailbox status register\n", err);
 		return err;
@@ -298,7 +298,7 @@ static int _hsmp_send_message(struct pci_dev *root_dev, struct hsmp_message *msg
 
 	/* Write any message arguments */
 	for (arg_num = 0; arg_num < msg->num_args; arg_num++) {
-		err = smu_pci_write(root_dev, hsmp_access.mbox_data + (arg_num << 2),
+		err = smn_pci_write(root_dev, hsmp_access.mbox_data + (arg_num << 2),
 				    msg->args[arg_num], &hsmp);
 		if (err) {
 			pr_debug("Error %d writing HSMP message argument %d\n",
@@ -308,7 +308,7 @@ static int _hsmp_send_message(struct pci_dev *root_dev, struct hsmp_message *msg
 	}
 
 	/* Write the message ID which starts the operation */
-	err = smu_pci_write(root_dev, hsmp_access.mbox_msg_id, msg->msg_num, &hsmp);
+	err = smn_pci_write(root_dev, hsmp_access.mbox_msg_id, msg->msg_num, &hsmp);
 	if (err) {
 		pr_debug("Error %d writing HSMP message ID %u\n", err, msg->msg_num);
 		return err;
@@ -317,23 +317,23 @@ static int _hsmp_send_message(struct pci_dev *root_dev, struct hsmp_message *msg
 	timeout = hsmp_access.mbox_timeout;
 
 	/*
-	 * Assume it takes at least one SMU FW cycle (1 MS) to complete
+	 * Assume it takes at least one SMN FW cycle (1 MS) to complete
 	 * the operation. Some operations might complete in two, some in
 	 * more. So first thing we do is yield the CPU.
 	 */
 retry:
 	nanosleep(&one_ms, NULL);
-	err = smu_pci_read(root_dev, hsmp_access.mbox_status, &mbox_status, &hsmp);
+	err = smn_pci_read(root_dev, hsmp_access.mbox_status, &mbox_status, &hsmp);
 	if (err) {
 		pr_debug("HSMP message ID %u - error %d reading mailbox status\n",
 			 err, msg->msg_num);
 		return err;
 	}
 
-	/* SMU has not responded to the message yet. */
+	/* SMN has not responded to the message yet. */
 	if (mbox_status == HSMP_STATUS_NOT_READY) {
 		if (--timeout == 0) {
-			pr_debug("SMU timeout for message ID %u\n", msg->msg_num);
+			pr_debug("SMN timeout for message ID %u\n", msg->msg_num);
 			errno = ETIMEDOUT;
 			return -1;
 		}
@@ -357,9 +357,9 @@ retry:
 	if (mbox_status != HSMP_STATUS_OK)
 		return mbox_status;
 
-	/* SMU has responded OK. Read response data */
+	/* SMN has responded OK. Read response data */
 	for (arg_num = 0; arg_num < msg->response_sz; arg_num++) {
-		err = smu_pci_read(root_dev, hsmp_access.mbox_data + (arg_num << 2),
+		err = smn_pci_read(root_dev, hsmp_access.mbox_data + (arg_num << 2),
 				   &msg->response[arg_num], &hsmp);
 		if (err) {
 			pr_debug("Error %d reading HSMP response %u for message ID %u\n",
@@ -404,9 +404,9 @@ static int hsmp_send_message(int socket_id, struct hsmp_message *msg)
 }
 
 /* Read a register in SMN address space */
-static int smu_read(struct pci_dev *root, u32 addr, u32 *val)
+static int smn_read(struct pci_dev *root, u32 addr, u32 *val)
 {
-	return smu_pci_read(root, addr, val, &smu);
+	return smn_pci_read(root, addr, val, &smn);
 }
 
 /*
@@ -713,14 +713,14 @@ static int hsmp_setup_nbios(void)
 		u32 addr, val;
 
 		addr = SMN_IOHCMISC0_NB_BUS_NUM_CNTL + (i & 0x3) * SMN_IOHCMISC_OFFSET;
-		err = smu_read(hsmp_data.nbios[i].dev, addr, &val);
+		err = smn_read(hsmp_data.nbios[i].dev, addr, &val);
 		if (err) {
 			pr_debug("Error %d accessing socket %d IOHCMISC%d\n",
 				 err, i >> 2, i & 0x3);
 			goto nbio_setup_error;
 		}
 
-		pr_debug("Socket %d IOHC%d smu_read addr 0x%08X = 0x%08X\n",
+		pr_debug("Socket %d IOHC%d smn_read addr 0x%08X = 0x%08X\n",
 			 i >> 2, i & 0x3, addr, val);
 		base = val & 0xFF;
 
@@ -835,11 +835,11 @@ static int hsmp_init(void)
 		return -1;
 
 	/* Set supported HSMP interface version */
-	hsmp_data.supported_intf = SMU_INTF_SUPPORTED;
+	hsmp_data.supported_intf = SMN_INTF_SUPPORTED;
 
 	/* Offsets in PCIe config space for 0x1480 DevID (IOHC) */
-	smu.index_reg  = 0x60;
-	smu.data_reg   = 0x64;
+	smn.index_reg  = 0x60;
+	smn.data_reg   = 0x64;
 	hsmp.index_reg = 0xC4;
 	hsmp.data_reg  = 0xC8;
 
