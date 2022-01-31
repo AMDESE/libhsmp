@@ -62,7 +62,7 @@ o EAGAIN    - set when a failure occurs during libhsmp initialization where
 
 o EINVAL    - set for any invalid parameter passed to libhsmp.
 
-o ETIMEDOUT - set when communication with the HSMP mailboxes timnes out.
+o ETIMEDOUT - set when communication with the HSMP mailboxes times out.
 
 
 4. Build
