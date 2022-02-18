@@ -331,7 +331,9 @@ static int _hsmp_send_message(struct pci_dev *root_dev, struct hsmp_message *msg
 	 * more. So first thing we do is yield the CPU.
 	 */
 retry:
-	nanosleep(&one_ms, NULL);
+	if (idle_wait_time_in_ns > 0)
+		nanosleep(&one_ms, NULL);
+
 	err = smu_pci_read(root_dev, hsmp_access.mbox_status, &mbox_status, &hsmp);
 	if (err) {
 		pr_debug("HSMP message ID %u - error %d reading mailbox status\n",
