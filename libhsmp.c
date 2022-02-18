@@ -120,6 +120,15 @@ static struct {
 	int			hsmp_disabled;
 } hsmp_data;
 
+/* environment variable toggled optimization variables */
+
+/* Changed by LIBHSMP_WAIT_TIME, allowed setting between 0 and 1,000,000, default 1,000,000 */
+#define DEFAULT_IDLE_WAIT_TIME (1000 * 1000)
+static long idle_wait_time_in_ns = DEFAULT_IDLE_WAIT_TIME;
+
+/* Changed by LIBHSMP_FAM17_WARNING, disables warning when set to 0, n, N, no, No */
+static int fam17_warning = 1;
+
 /* HSMP Status codes used internally */
 #define HSMP_STATUS_NOT_READY   0x00
 #define HSMP_STATUS_OK          0x01
@@ -283,7 +292,7 @@ static void hsmp_unlock(void)
  */
 static int _hsmp_send_message(struct pci_dev *root_dev, struct hsmp_message *msg)
 {
-	struct timespec one_ms = { 0, 1000 * 1000 };
+	struct timespec one_ms = { 0, idle_wait_time_in_ns };
 	unsigned int arg_num = 0;
 	int err, timeout;
 	u32 mbox_status;
@@ -590,15 +599,14 @@ static int get_system_info(void)
 		pr_debug("Detected %s CPU family %xh model %xh\n",
 			 vendstr[id], family, model);
 
-		if (family == 0x17)
+		if (family == 0x17 && fam17_warning)
 			fprintf(stderr,
 				"WARNING: libhsmp not supported on %s CPU Family 0x17 CPUs\n",
 				vendstr[id]);
 		return 0;
 	}
-
 	pr_debug("libhsmp not supported on %s CPU family %xh model %xh\n",
-		 vendstr[id], family, model);
+			vendstr[id], family, model);
 	hsmp_data.hsmp_disabled = 1;
 	errno = ENOTSUP;
 	return -1;
@@ -853,6 +861,56 @@ static int hsmp_init(void)
 	}
 
 	hsmp_data.initialized = 1;
+
+	/* read environment variables for fine tuning wait time */
+	char *env_var = getenv("LIBHSMP_WAIT_TIME");
+	if (env_var != NULL){
+		char* endptr = NULL;
+		idle_wait_time_in_ns = strtol(env_var, &endptr, 10);
+		if (idle_wait_time_in_ns > (1000 * 1000) ) {
+			fprintf(stderr,
+				"WARNING: Invalid setting for LIBHSMP_WAIT_TIME, max is 1000000, using default\n");
+			idle_wait_time_in_ns = DEFAULT_IDLE_WAIT_TIME;
+		} else if (idle_wait_time_in_ns < 0) {
+			fprintf(stderr,
+				"WARNING: Invalid setting for LIBHSMP_WAIT_TIME, min is 0, using default\n");
+			idle_wait_time_in_ns = DEFAULT_IDLE_WAIT_TIME;
+		}
+		if (endptr == env_var){
+			fprintf(stderr,
+				"WARNING: Invalid format for LIBHSMP_WAIT_TIME, using default\n");
+			idle_wait_time_in_ns = DEFAULT_IDLE_WAIT_TIME;
+		}
+	}
+
+	/* read environment variables for disabling Fam17h warning */
+	env_var = getenv("LIBHSMP_FAM17_WARNING");
+	if (env_var != NULL){
+		switch (strlen(env_var)){
+			case 1: /* allow 0,n,N */
+				switch (env_var[0]){
+					case '0': /* fall-through */
+					case 'n': /* fall-through */
+					case 'N': fam17_warning = 0; break;
+					default:
+						fprintf(stderr,
+							"WARNING: Invalid format for LIBHSMP_FAM17_WARNING, using default\n");
+				}
+				break;
+			case 2:
+				if (strncasecmp(env_var, "no", 2) == 0) {
+					 fam17_warning = 0;
+				} else {
+					fprintf(stderr,
+						"WARNING: Invalid format for LIBHSMP_FAM17_WARNING, using default\n");
+				}
+				break;
+			default:
+				fprintf(stderr,
+					"WARNING: Invalid format for LIBHSMP_FAM17_WARNING, using default\n");
+		}
+	}
+
 	return 0;
 }
 

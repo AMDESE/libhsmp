@@ -27,6 +27,23 @@ defaults to only executing on AMD Family 19h and later CPUs.
 A full listing of the interfaces to libhsmp with explanations is
 available in libhsmp.h.
 
+2.1. Environment Variables
+==========================
+
+2.1.1. LIBHSMP_WAIT_TIME
+The environment variable LIBHSMP_WAIT_TIME sets the time libhsmp waits
+before polling the answer on a request in nanoseconds. By default
+libhsmp waits 1,000,000 ns (i.e., 1 ms). You can lower the time by
+setting this variable to something between 0 (busy-waiting) and
+1000000 as a waiting time in nanoseconds.
+
+2.1.2. LIBHSMP_FAM17_WARNING
+The environment variable LIBHSMP_FAM17_WARNING allows you to disable
+the Family 17h warning, which could trigger some errors if stderr is
+parsed by a error checking tool. By setting LIBHSMP_FAM17_WARNING to
+"0", "n", "N", or "No" you can disable the warning message
+" WARNING: libhsmp not supported ...".
+
 3. Errors
 =========
 
