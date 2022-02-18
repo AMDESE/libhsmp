@@ -826,42 +826,8 @@ static int hsmp_get_cpu_data(void)
 	return err;
 }
 
-static int hsmp_init(void)
+static void hsmp_check_environment(void)
 {
-	int err;
-
-	err = get_system_info();
-	if (err)
-		return -1;
-
-	/* Offsets in PCIe config space for 0x1480 DevID (IOHC) */
-	smu.index_reg  = 0x60;
-	smu.data_reg   = 0x64;
-	hsmp.index_reg = 0xC4;
-	hsmp.data_reg  = 0xC8;
-
-	/* Offsets in SMN address space */
-	hsmp_access.mbox_msg_id  = 0x3B10534;
-	hsmp_access.mbox_status  = 0x3B10980;
-	hsmp_access.mbox_data    = 0x3B109E0;
-
-	hsmp_access.mbox_timeout = 500;
-
-	err = hsmp_setup_nbios();
-	if (err)
-		return -1;
-
-	err = hsmp_get_cpu_data();
-	if (!err)
-		err = hsmp_probe();
-
-	if (err) {
-		hsmp_cleanup_nbios();
-		return err;
-	}
-
-	hsmp_data.initialized = 1;
-
 	/* read environment variables for fine tuning wait time */
 	char *env_var = getenv("LIBHSMP_WAIT_TIME");
 	if (env_var != NULL){
@@ -910,6 +876,45 @@ static int hsmp_init(void)
 					"WARNING: Invalid format for LIBHSMP_FAM17_WARNING, using default\n");
 		}
 	}
+}
+
+static int hsmp_init(void)
+{
+	int err;
+
+	hsmp_check_environment();
+
+	err = get_system_info();
+	if (err)
+		return -1;
+
+	/* Offsets in PCIe config space for 0x1480 DevID (IOHC) */
+	smu.index_reg  = 0x60;
+	smu.data_reg   = 0x64;
+	hsmp.index_reg = 0xC4;
+	hsmp.data_reg  = 0xC8;
+
+	/* Offsets in SMN address space */
+	hsmp_access.mbox_msg_id  = 0x3B10534;
+	hsmp_access.mbox_status  = 0x3B10980;
+	hsmp_access.mbox_data    = 0x3B109E0;
+
+	hsmp_access.mbox_timeout = 500;
+
+	err = hsmp_setup_nbios();
+	if (err)
+		return -1;
+
+	err = hsmp_get_cpu_data();
+	if (!err)
+		err = hsmp_probe();
+
+	if (err) {
+		hsmp_cleanup_nbios();
+		return err;
+	}
+
+	hsmp_data.initialized = 1;
 
 	return 0;
 }
